@@ -494,7 +494,7 @@ function Dashboard({ user, onLogout }) {
               <ProgramCard
                 key={p.id}
                 program={p}
-                isLocked={p.id > 2}
+                isLocked={false}
                 onSelect={() => {}}
               />
             ))}

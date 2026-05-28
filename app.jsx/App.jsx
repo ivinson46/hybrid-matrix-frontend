@@ -175,7 +175,7 @@ function AuthModal({ mode, onClose, onSuccess }) {
       localStorage.setItem("hm_token", data.access_token);
       localStorage.setItem("hm_user", JSON.stringify({
         id: data.user_id,
-        name: form.full_name || form.email.split("@")[0],
+        name: data.full_name || form.full_name || form.email.split("@")[0],
         tier: data.tier,
         email: form.email,
       }));

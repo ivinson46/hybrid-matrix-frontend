@@ -525,7 +525,8 @@ export default function HybridMatrix() {
 
   const handleAuthSuccess = (data) => {
     const stored = localStorage.getItem("hm_user");
-    setUser(stored ? JSON.parse(stored) : { name: "Athlete", tier: data.tier });
+    const parsed = stored ? JSON.parse(stored) : null;
+    setUser(parsed || { name: data.full_name || "Athlete", tier: data.tier });
     setAuthModal(null);
   };
 

@@ -498,7 +498,10 @@ export default function HybridMatrix() {
   const [user, setUser] = useState(() => {
     try {
       const u = localStorage.getItem("hm_user");
-      return u ? JSON.parse(u) : null;
+      if (!u) return null;
+      const parsed = JSON.parse(u);
+      if (!parsed.name || parsed.name === parsed.email?.split("@")[0]) return null;
+      return parsed;
     } catch { return null; }
   });
   const [authModal, setAuthModal] = useState(null);

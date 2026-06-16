@@ -84,7 +84,6 @@ const STATS = [
   { value: "EN/ES", label: "BILINGUAL" },
 ];
 
-// ─── PARTICLE BACKGROUND ───────────────────────────────────────────
 function ParticleCanvas() {
   const canvasRef = useRef(null);
   useEffect(() => {
@@ -146,7 +145,20 @@ function ParticleCanvas() {
   );
 }
 
-// ─── AUTH MODAL ────────────────────────────────────────────────────
+const inputStyle = {
+  padding: "13px 16px",
+  background: "#050810",
+  border: "1px solid #1a2744",
+  borderRadius: "8px",
+  color: "#E2E8F0",
+  fontSize: "11px",
+  letterSpacing: "2px",
+  fontFamily: "'Courier New', monospace",
+  outline: "none",
+  width: "100%",
+  boxSizing: "border-box",
+};
+
 function AuthModal({ mode, onClose, onSuccess }) {
   const [tab, setTab] = useState(mode);
   const [form, setForm] = useState({ email: "", password: "", full_name: "" });
@@ -172,14 +184,18 @@ function AuthModal({ mode, onClose, onSuccess }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Something went wrong");
+
+      const displayName = data.full_name ? data.full_name : form.email.split("@")[0];
+
       localStorage.setItem("hm_token", data.access_token);
       localStorage.setItem("hm_user", JSON.stringify({
         id: data.user_id,
-        name: form.full_name || form.email.split("@")[0],
+        name: displayName,
         tier: data.tier,
         email: form.email,
       }));
-      onSuccess(data);
+
+      onSuccess({ ...data, resolvedName: displayName });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -201,7 +217,6 @@ function AuthModal({ mode, onClose, onSuccess }) {
         boxShadow: "0 0 60px rgba(0,255,135,0.08)",
         fontFamily: "'Courier New', monospace",
       }}>
-        {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "32px" }}>
           <div style={{ fontSize: "9px", letterSpacing: "6px", color: "#00FF87", marginBottom: "6px" }}>
             HYBRID MATRIX
@@ -211,7 +226,6 @@ function AuthModal({ mode, onClose, onSuccess }) {
           </div>
         </div>
 
-        {/* Tabs */}
         <div style={{ display: "flex", marginBottom: "28px", border: "1px solid #1a2744", borderRadius: "8px", overflow: "hidden" }}>
           {["login", "register"].map((t) => (
             <button key={t} onClick={() => { setTab(t); setError(""); }} style={{
@@ -228,7 +242,6 @@ function AuthModal({ mode, onClose, onSuccess }) {
           ))}
         </div>
 
-        {/* Fields */}
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           {tab === "register" && (
             <input
@@ -281,21 +294,6 @@ function AuthModal({ mode, onClose, onSuccess }) {
   );
 }
 
-const inputStyle = {
-  padding: "13px 16px",
-  background: "#050810",
-  border: "1px solid #1a2744",
-  borderRadius: "8px",
-  color: "#E2E8F0",
-  fontSize: "11px",
-  letterSpacing: "2px",
-  fontFamily: "'Courier New', monospace",
-  outline: "none",
-  width: "100%",
-  boxSizing: "border-box",
-};
-
-// ─── PROGRAM CARD ──────────────────────────────────────────────────
 function ProgramCard({ program, onSelect, isLocked }) {
   const [hovered, setHovered] = useState(false);
   return (
@@ -318,14 +316,12 @@ function ProgramCard({ program, onSelect, isLocked }) {
         fontFamily: "'Courier New', monospace",
       }}
     >
-      {/* Glow line top */}
       <div style={{
         position: "absolute", top: 0, left: 0, right: 0, height: "2px",
         background: hovered ? `linear-gradient(90deg, transparent, ${program.tagColor}, transparent)` : "transparent",
         transition: "all 0.3s",
       }} />
 
-      {/* Tag */}
       <div style={{
         display: "inline-block",
         padding: "3px 10px",
@@ -339,7 +335,6 @@ function ProgramCard({ program, onSelect, isLocked }) {
         {program.tag}
       </div>
 
-      {/* Lock overlay */}
       {isLocked && (
         <div style={{
           position: "absolute", top: "12px", right: "12px",
@@ -362,7 +357,6 @@ function ProgramCard({ program, onSelect, isLocked }) {
         {program.description}
       </div>
 
-      {/* Meta */}
       <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
         {[
           { label: "LEVEL", value: program.category },
@@ -380,7 +374,6 @@ function ProgramCard({ program, onSelect, isLocked }) {
   );
 }
 
-// ─── DASHBOARD ─────────────────────────────────────────────────────
 function Dashboard({ user, onLogout }) {
   return (
     <div style={{
@@ -389,7 +382,6 @@ function Dashboard({ user, onLogout }) {
       fontFamily: "'Courier New', monospace",
       color: "#E2E8F0",
     }}>
-      {/* Nav */}
       <div style={{
         borderBottom: "1px solid #1a2744",
         padding: "20px 40px",
@@ -427,7 +419,6 @@ function Dashboard({ user, onLogout }) {
         </div>
       </div>
 
-      {/* Welcome */}
       <div style={{ padding: "60px 40px 40px", maxWidth: "1100px", margin: "0 auto" }}>
         <div style={{ fontSize: "9px", letterSpacing: "5px", color: "#00FF87", marginBottom: "10px" }}>
           WELCOME BACK
@@ -445,7 +436,6 @@ function Dashboard({ user, onLogout }) {
           YOUR TRAINING MATRIX IS READY
         </div>
 
-        {/* Tier card */}
         <div style={{
           marginTop: "40px",
           background: "linear-gradient(145deg, #0D1525, #111827)",
@@ -480,7 +470,6 @@ function Dashboard({ user, onLogout }) {
           </button>
         </div>
 
-        {/* Programs grid */}
         <div style={{ marginTop: "50px" }}>
           <div style={{ fontSize: "9px", letterSpacing: "5px", color: "#4A5568", marginBottom: "24px" }}>
             YOUR PROGRAMS
@@ -505,7 +494,6 @@ function Dashboard({ user, onLogout }) {
   );
 }
 
-// ─── MAIN APP ──────────────────────────────────────────────────────
 export default function HybridMatrix() {
   const [user, setUser] = useState(() => {
     try {
@@ -513,7 +501,7 @@ export default function HybridMatrix() {
       return u ? JSON.parse(u) : null;
     } catch { return null; }
   });
-  const [authModal, setAuthModal] = useState(null); // "login" | "register" | null
+  const [authModal, setAuthModal] = useState(null);
   const [selectedProgram, setSelectedProgram] = useState(null);
   const [scrolled, setScrolled] = useState(false);
 
@@ -524,8 +512,11 @@ export default function HybridMatrix() {
   }, []);
 
   const handleAuthSuccess = (data) => {
-    const stored = localStorage.getItem("hm_user");
-    setUser(stored ? JSON.parse(stored) : { name: "Athlete", tier: data.tier });
+    setUser({
+      id: data.user_id,
+      name: data.resolvedName,
+      tier: data.tier,
+    });
     setAuthModal(null);
   };
 
@@ -545,7 +536,6 @@ export default function HybridMatrix() {
       color: "#E2E8F0",
       overflowX: "hidden",
     }}>
-      {/* Auth Modal */}
       {authModal && (
         <AuthModal
           mode={authModal}
@@ -554,7 +544,6 @@ export default function HybridMatrix() {
         />
       )}
 
-      {/* Program Detail Modal */}
       {selectedProgram && (
         <div style={{
           position: "fixed", inset: 0, zIndex: 900,
@@ -619,7 +608,6 @@ export default function HybridMatrix() {
         </div>
       )}
 
-      {/* NAV */}
       <nav style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 500,
         padding: "18px 40px",
@@ -659,7 +647,6 @@ export default function HybridMatrix() {
         </div>
       </nav>
 
-      {/* HERO */}
       <div style={{
         position: "relative", minHeight: "100vh",
         display: "flex", alignItems: "center", justifyContent: "center",
@@ -667,8 +654,6 @@ export default function HybridMatrix() {
         padding: "120px 40px 80px",
       }}>
         <ParticleCanvas />
-
-        {/* Grid overlay */}
         <div style={{
           position: "absolute", inset: 0, zIndex: 0,
           backgroundImage: `
@@ -677,7 +662,6 @@ export default function HybridMatrix() {
           `,
           backgroundSize: "60px 60px",
         }} />
-
         <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: "800px" }}>
           <div style={{
             display: "inline-block",
@@ -688,7 +672,6 @@ export default function HybridMatrix() {
           }}>
             SCIENCE-BASED · AI POWERED · BILINGUAL EN/ES
           </div>
-
           <h1 style={{
             fontSize: "clamp(42px, 8vw, 96px)",
             fontWeight: "900", letterSpacing: "6px",
@@ -701,7 +684,6 @@ export default function HybridMatrix() {
             <br />
             <span style={{ color: "#E2E8F0" }}>MATRIX</span>
           </h1>
-
           <p style={{
             fontSize: "clamp(13px, 2vw, 16px)",
             color: "#718096", lineHeight: "1.8",
@@ -712,7 +694,6 @@ export default function HybridMatrix() {
             AI-driven training built from real science — because your life
             is dynamic, and your training should be too.
           </p>
-
           <div style={{ display: "flex", gap: "14px", justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={() => setAuthModal("register")} style={{
               padding: "16px 36px",
@@ -740,7 +721,6 @@ export default function HybridMatrix() {
         </div>
       </div>
 
-      {/* STATS BAR */}
       <div style={{
         borderTop: "1px solid #1a2744", borderBottom: "1px solid #1a2744",
         padding: "28px 40px",
@@ -759,7 +739,6 @@ export default function HybridMatrix() {
         ))}
       </div>
 
-      {/* PROGRAMS SECTION */}
       <div id="programs" style={{ padding: "80px 40px", maxWidth: "1200px", margin: "0 auto" }}>
         <div style={{ marginBottom: "48px" }}>
           <div style={{ fontSize: "9px", letterSpacing: "5px", color: "#00FF87", marginBottom: "12px" }}>
@@ -776,7 +755,6 @@ export default function HybridMatrix() {
             Sign up free to start. Upgrade anytime to unlock the full library.
           </p>
         </div>
-
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
@@ -792,7 +770,6 @@ export default function HybridMatrix() {
           ))}
         </div>
 
-        {/* CTA */}
         <div style={{
           marginTop: "60px", textAlign: "center",
           padding: "60px 40px",
@@ -834,7 +811,6 @@ export default function HybridMatrix() {
         </div>
       </div>
 
-      {/* FOOTER */}
       <div style={{
         borderTop: "1px solid #1a2744",
         padding: "32px 40px",

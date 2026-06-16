@@ -185,7 +185,7 @@ function AuthModal({ mode, onClose, onSuccess }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Something went wrong");
 
-      const displayName = data.full_name || form.full_name || form.email.split("@")[0];
+      const displayName = (data.full_name && data.full_name.trim() !== "") ? data.full_name : (form.full_name && form.full_name.trim() !== "") ? form.full_name : form.email.split("@")[0];
 
       localStorage.setItem("hm_token", data.access_token);
       localStorage.setItem("hm_user", JSON.stringify({

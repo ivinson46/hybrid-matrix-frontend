@@ -287,7 +287,7 @@ function WorkoutView({ program, exercises, onBack }) {
                   <div style={{ fontSize: "14px", fontWeight: "900", letterSpacing: "1px", color: "#E2E8F0" }}>{ex.name}</div>
                 </div>
                 {ex.video_url && (
-                  <a href={ex.video_url} target="_blank" rel="noreferrer" style={{ padding: "6px 12px", background: `${color}15`, border: `1px solid ${color}40`, borderRadius: "6px", color: color, fontSize: "9px", letterSpacing: "2px", textDecoration: "none", whiteSpace: "nowrap", marginLeft: "12px" }}>▶ VIDEO</a>
+                  <video src={ex.video_url} controls preload="none" style={{ width: "120px", height: "80px", borderRadius: "6px", border: `1px solid ${color}40`, objectFit: "cover", background: "#050810" }} />
                 )}
               </div>
 

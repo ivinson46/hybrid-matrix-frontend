@@ -221,6 +221,7 @@ function WorkoutView({ program, onBack }) {
   const [programExercises, setProgramExercises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentDay, setCurrentDay] = useState(1);
+  const [logged, setLogged] = useState(false);
 
   useEffect(() => {
     const fetchExercises = async () => {
@@ -237,6 +238,7 @@ function WorkoutView({ program, onBack }) {
     };
     fetchExercises();
     setCompletedSets({});
+    setLogged(false);
   }, [program.id, currentDay]);
 
   const prescription = programExercises.length > 0
@@ -250,14 +252,37 @@ function WorkoutView({ program, onBack }) {
 
   const totalSets = programExercises.length * prescription.sets;
   const doneSets = Object.values(completedSets).filter(Boolean).length;
-  const progress = Math.round((doneSets / totalSets) * 100);
+  const progress = totalSets > 0 ? Math.round((doneSets / totalSets) * 100) : 0;
+
+  useEffect(() => {
+    if (progress !== 100 || logged) return;
+    const logWorkout = async () => {
+      try {
+        const token = localStorage.getItem("hm_token");
+        await fetch(`${API}/api/v1/workout-logs`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            program_id: program.id,
+            day_number: currentDay,
+            week_number: 1,
+            completed_exercises: completedSets,
+          }),
+        });
+        setLogged(true);
+      } catch (err) {
+        console.error("Failed to log workout", err);
+      }
+    };
+    logWorkout();
+  }, [progress, logged]);
 
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #050810 0%, #080D1A 100%)", fontFamily: "'Courier New', monospace", color: "#E2E8F0" }}>
       {/* Header */}
       <div style={{ borderBottom: "1px solid #1a2744", padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#05081099", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 100 }}>
         <div>
-          <div style={{ fontSize: "8px", letterSpacing: "3px", color: color, marginBottom: "4px" }}>{program.category?.toUpperCase()} — WEEK 1 DAY 1</div>
+          <div style={{ fontSize: "8px", letterSpacing: "3px", color: color, marginBottom: "4px" }}>{program.category?.toUpperCase()} — WEEK 1 DAY {currentDay}</div>
           <div style={{ fontSize: "14px", fontWeight: "900", letterSpacing: "2px", color: "#E2E8F0" }}>{program.name}</div>
         </div>
         <button onClick={onBack} style={{ background: "transparent", border: "1px solid #1a2744", padding: "8px 16px", cursor: "pointer", color: "#4A5568", fontSize: "9px", letterSpacing: "2px", fontFamily: "'Courier New', monospace", borderRadius: "6px" }}>← BACK</button>
@@ -352,7 +377,7 @@ function WorkoutView({ program, onBack }) {
           <div style={{ marginTop: "32px", textAlign: "center", padding: "40px", background: "linear-gradient(145deg, #0D1525, #111827)", border: `1px solid ${color}40`, borderRadius: "16px" }}>
             <div style={{ fontSize: "32px", marginBottom: "16px" }}>🏆</div>
             <div style={{ fontSize: "14px", fontWeight: "900", color: color, letterSpacing: "3px", marginBottom: "8px" }}>WORKOUT COMPLETE!</div>
-            <div style={{ fontSize: "11px", color: "#718096", letterSpacing: "1px" }}>Day 1 of {program.weeks * program.days_per_week} total sessions done.</div>
+            <div style={{ fontSize: "11px", color: "#718096", letterSpacing: "1px" }}>Day {currentDay} logged. {program.weeks * program.days_per_week} total sessions in this program.</div>
             <button onClick={onBack} style={{ marginTop: "24px", padding: "14px 32px", background: `linear-gradient(90deg, ${color}, #00D4FF)`, border: "none", borderRadius: "8px", cursor: "pointer", color: "#050810", fontWeight: "900", fontSize: "11px", letterSpacing: "3px", fontFamily: "'Courier New', monospace" }}>BACK TO PROGRAMS</button>
           </div>
         )}

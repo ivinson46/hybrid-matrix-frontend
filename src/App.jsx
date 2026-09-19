@@ -296,46 +296,60 @@ function WorkoutView({ program, onBack }) {
         <button onClick={onBack} style={{ background: "transparent", border: "1px solid #1a2744", padding: "8px 16px", cursor: "pointer", color: "#4A5568", fontSize: "9px", letterSpacing: "2px", fontFamily: "'Courier New', monospace", borderRadius: "6px" }}>← BACK</button>
       </div>
 
-      <div style={{ padding: "40px", maxWidth: "800px", margin: "0 auto" }}>
+      <div style={{ padding: "24px 32px", maxWidth: "800px", margin: "0 auto" }}>
 
         {/* Progress bar */}
-        <div style={{ marginBottom: "32px" }}>
+        <div style={{ marginBottom: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-            <div style={{ fontSize: "9px", letterSpacing: "3px", color: "#4A5568" }}>WORKOUT PROGRESS</div>
-            <div style={{ fontSize: "9px", letterSpacing: "2px", color: color }}>{progress}% COMPLETE</div>
+            <div style={{ fontSize: "11px", color: "#4A5568", fontFamily: SANS }}>Workout Progress</div>
+            <div style={{ fontSize: "11px", fontWeight: "600", color: color, fontFamily: SANS }}>{progress}% Complete</div>
           </div>
           <div style={{ background: "#1a2744", borderRadius: "4px", height: "6px" }}>
-            <div style={{ background: `linear-gradient(90deg, ${color}, #00D4FF)`, height: "100%", borderRadius: "4px", width: `${progress}%`, transition: "width 0.3s" }} />
+            <div style={{ background: `linear-gradient(90deg, ${color}, #00D4FF)`, height: "100%", borderRadius: "4px", width: `${progress}%`, transition: "width 0.4s" }} />
           </div>
         </div>
 
+        {/* Day navigation */}
+        <div style={{ display: "flex", gap: "8px", marginBottom: "20px", flexWrap: "wrap" }}>
+          {Array.from({ length: program.days_per_week }).map((_, i) => (
+            <button key={i} onClick={() => setCurrentDay(i + 1)} style={{
+              padding: "8px 18px",
+              background: currentDay === i + 1 ? color : "transparent",
+              border: `1px solid ${currentDay === i + 1 ? color : "#1a2744"}`,
+              borderRadius: "20px", cursor: "pointer",
+              color: currentDay === i + 1 ? "#050810" : "#718096",
+              fontSize: "13px", fontWeight: currentDay === i + 1 ? "700" : "400",
+              fontFamily: SANS, transition: "all 0.2s",
+            }}>Day {i + 1}</button>
+          ))}
+        </div>
+
         {/* Prescription */}
-        <div style={{ background: "linear-gradient(145deg, #0D1525, #111827)", border: `1px solid ${color}30`, borderRadius: "12px", padding: "20px", marginBottom: "32px", display: "flex", gap: "24px", flexWrap: "wrap" }}>
+        <div style={{ background: "linear-gradient(145deg, #0D1525, #111827)", border: `1px solid ${color}30`, borderRadius: "14px", padding: "18px 20px", marginBottom: "24px", display: "flex", gap: "16px", flexWrap: "wrap" }}>
           {[{ label: "SETS", value: prescription.sets }, { label: "REPS", value: prescription.reps }, { label: "REST", value: prescription.rest }, { label: "EXERCISES", value: programExercises.length }].map((m) => (
             <div key={m.label}>
-              <div style={{ fontSize: "8px", color: "#4A5568", letterSpacing: "2px" }}>{m.label}</div>
-              <div style={{ fontSize: "18px", fontWeight: "900", color: color, marginTop: "2px" }}>{m.value}</div>
+              <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "2px", fontFamily: MONO }}>{m.label}</div>
+              <div style={{ fontSize: "20px", fontWeight: "700", color: color, marginTop: "2px", fontFamily: SANS }}>{m.value}</div>
             </div>
           ))}
         </div>
 
         {/* Exercise list */}
-        <div style={{ fontSize: "9px", letterSpacing: "5px", color: "#4A5568", marginBottom: "16px" }}>EXERCISES — TAP SETS TO LOG COMPLETION</div>
+        <div style={{ fontSize: "10px", letterSpacing: "3px", color: "#4A5568", marginBottom: "14px", fontFamily: MONO }}>EXERCISES — TAP SETS TO LOG</div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           {programExercises.map((ex, exIdx) => (
-            <div key={ex.id} style={{ background: "linear-gradient(145deg, #080D1A, #0A0F1E)", border: "1px solid #1a2744", borderRadius: "12px", padding: "20px" }}>
+            <div key={ex.id} style={{ background: "#050D1A", border: "1px solid #1a2744", borderRadius: "14px", padding: "18px 20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px" }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "8px", color: "#4A5568", letterSpacing: "2px", marginBottom: "4px" }}>{ex.body_part} · {ex.equipment}</div>
-                  <div style={{ fontSize: "14px", fontWeight: "900", letterSpacing: "1px", color: "#E2E8F0" }}>{ex.name}</div>
+                  <div style={{ fontSize: "10px", color: "#4A5568", letterSpacing: "1px", marginBottom: "4px", fontFamily: MONO }}>{ex.body_part} · {ex.equipment}</div>
+                  <div style={{ fontSize: "16px", fontWeight: "700", color: "#E2E8F0", fontFamily: SANS }}>{ex.name}</div>
                 </div>
                 {ex.video_url && (
                   <a href={ex.video_url} target="_blank" rel="noreferrer" style={{ textDecoration: "none", marginLeft: "12px", flexShrink: 0 }}>
-                    <div style={{ width: "100px", height: "70px", borderRadius: "8px", border: `1px solid ${color}40`, background: "#050810", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative", overflow: "hidden", transition: "all 0.2s" }}>
-                      <div style={{ fontSize: "24px", marginBottom: "4px" }}>▶</div>
-                      <div style={{ fontSize: "7px", color: color, letterSpacing: "2px" }}>WATCH</div>
-                      <div style={{ position: "absolute", inset: 0, background: `${color}05`, borderRadius: "8px" }} />
+                    <div style={{ width: "88px", height: "60px", borderRadius: "8px", border: `1px solid ${color}40`, background: "#050810", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                      <div style={{ fontSize: "20px" }}>▶</div>
+                      <div style={{ fontSize: "8px", color: color, fontFamily: MONO, letterSpacing: "1px", marginTop: "2px" }}>WATCH</div>
                     </div>
                   </a>
                 )}
@@ -343,12 +357,12 @@ function WorkoutView({ program, onBack }) {
 
               {/* Set tracking */}
               <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-                <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "2px", marginRight: "4px" }}>{prescription.reps} REPS:</div>
+                <div style={{ fontSize: "12px", color: "#4A5568", fontFamily: SANS, marginRight: "4px" }}>{prescription.reps} reps</div>
                 {Array.from({ length: prescription.sets }).map((_, setIdx) => {
                   const key = `${exIdx}-${setIdx}`;
                   const done = completedSets[key];
                   return (
-                    <button key={setIdx} onClick={() => toggleSet(exIdx, setIdx)} style={{ width: "36px", height: "36px", borderRadius: "8px", border: `1px solid ${done ? color : "#1a2744"}`, background: done ? `${color}20` : "#050810", cursor: "pointer", color: done ? color : "#4A5568", fontSize: "11px", fontWeight: "900", fontFamily: "'Courier New', monospace", transition: "all 0.2s" }}>
+                    <button key={setIdx} onClick={() => toggleSet(exIdx, setIdx)} style={{ width: "40px", height: "40px", borderRadius: "10px", border: `1px solid ${done ? color : "#1a2744"}`, background: done ? `${color}20` : "#0A0F1E", cursor: "pointer", color: done ? color : "#4A5568", fontSize: "13px", fontWeight: "700", fontFamily: SANS, transition: "all 0.2s" }}>
                       {done ? "✓" : setIdx + 1}
                     </button>
                   );
@@ -359,34 +373,17 @@ function WorkoutView({ program, onBack }) {
         </div>
 
         {loading && (
-          <div style={{ textAlign: "center", padding: "40px", color: "#4A5568", letterSpacing: "3px", fontSize: "11px" }}>
-            LOADING WORKOUT...
-          </div>
-        )}
-
-        {/* Day navigation */}
-        {!loading && (
-          <div style={{ display: "flex", gap: "8px", marginBottom: "24px", flexWrap: "wrap" }}>
-            {Array.from({ length: program.days_per_week }).map((_, i) => (
-              <button key={i} onClick={() => setCurrentDay(i + 1)} style={{
-                padding: "8px 16px",
-                background: currentDay === i + 1 ? "#00FF8715" : "transparent",
-                border: `1px solid ${currentDay === i + 1 ? color : "#1a2744"}`,
-                borderRadius: "20px", cursor: "pointer",
-                color: currentDay === i + 1 ? color : "#4A5568",
-                fontSize: "9px", letterSpacing: "2px",
-                fontFamily: "'Courier New', monospace",
-              }}>DAY {i + 1}</button>
-            ))}
+          <div style={{ textAlign: "center", padding: "40px", color: "#4A5568", fontSize: "13px", fontFamily: SANS }}>
+            Loading workout...
           </div>
         )}
 
         {progress === 100 && (
           <div style={{ marginTop: "32px", textAlign: "center", padding: "40px", background: "linear-gradient(145deg, #0D1525, #111827)", border: `1px solid ${color}40`, borderRadius: "16px" }}>
-            <div style={{ fontSize: "32px", marginBottom: "16px" }}>🏆</div>
-            <div style={{ fontSize: "14px", fontWeight: "900", color: color, letterSpacing: "3px", marginBottom: "8px" }}>WORKOUT COMPLETE!</div>
-            <div style={{ fontSize: "11px", color: "#718096", letterSpacing: "1px" }}>Day {currentDay} logged. {program.weeks * program.days_per_week} total sessions in this program.</div>
-            <button onClick={onBack} style={{ marginTop: "24px", padding: "14px 32px", background: `linear-gradient(90deg, ${color}, #00D4FF)`, border: "none", borderRadius: "8px", cursor: "pointer", color: "#050810", fontWeight: "900", fontSize: "11px", letterSpacing: "3px", fontFamily: "'Courier New', monospace" }}>BACK TO PROGRAMS</button>
+            <div style={{ fontSize: "40px", marginBottom: "12px" }}>🏆</div>
+            <div style={{ fontSize: "20px", fontWeight: "800", color: color, fontFamily: SANS, marginBottom: "8px" }}>Workout Complete!</div>
+            <div style={{ fontSize: "14px", color: "#718096", fontFamily: SANS }}>Day {currentDay} logged.</div>
+            <button onClick={onBack} style={{ marginTop: "24px", padding: "14px 32px", background: `linear-gradient(90deg, ${color}, #00D4FF)`, border: "none", borderRadius: "10px", cursor: "pointer", color: "#050810", fontWeight: "700", fontSize: "14px", fontFamily: SANS }}>Back to Programs</button>
           </div>
         )}
       </div>
@@ -446,6 +443,18 @@ function ProgramDetailModal({ program, onClose, onStart }) {
   );
 }
 
+const SANS = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const MONO = "'Courier New', monospace";
+
+function StatBadge({ label, value, color }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: `${color}12`, border: `1px solid ${color}30`, borderRadius: "8px", padding: "6px 10px", minWidth: "44px" }}>
+      <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "1px", fontFamily: MONO, marginBottom: "2px" }}>{label}</div>
+      <div style={{ fontSize: "13px", fontWeight: "700", color: color, fontFamily: SANS }}>{value}</div>
+    </div>
+  );
+}
+
 function AIGeneratorModal({ user, onClose, onStart }) {
   const [generating, setGenerating] = useState(false);
   const [generatedProgram, setGeneratedProgram] = useState(null);
@@ -474,7 +483,6 @@ function AIGeneratorModal({ user, onClose, onStart }) {
         weeks: 8,
       };
 
-      // Kick off generation — returns immediately with job_id
       const res = await fetch(`${API}/api/v1/ai-programs/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -484,8 +492,6 @@ function AIGeneratorModal({ user, onClose, onStart }) {
       if (!res.ok) throw new Error(data.detail || `Server error ${res.status}`);
 
       const jobId = data.job_id;
-
-      // Poll until complete
       let attempts = 0;
       while (attempts < 40) {
         await new Promise(r => setTimeout(r, 3000));
@@ -493,13 +499,8 @@ function AIGeneratorModal({ user, onClose, onStart }) {
           headers: { Authorization: `Bearer ${token}` },
         });
         const result = await poll.json();
-        if (result.status === "complete") {
-          setGeneratedProgram(result.program);
-          return;
-        }
-        if (result.status === "failed") {
-          throw new Error(result.error || "Generation failed");
-        }
+        if (result.status === "complete") { setGeneratedProgram(result.program); return; }
+        if (result.status === "failed") throw new Error(result.error || "Generation failed");
         attempts++;
       }
       throw new Error("Timed out waiting for program generation");
@@ -526,89 +527,100 @@ function AIGeneratorModal({ user, onClose, onStart }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.92)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", overflowY: "auto" }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: "linear-gradient(145deg, #0A0F1E, #0D1525)", border: `1px solid ${color}40`, borderRadius: "16px", padding: "40px", maxWidth: "700px", width: "100%", fontFamily: "'Courier New', monospace", maxHeight: "90vh", overflowY: "auto" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.92)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", overflowY: "auto" }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "linear-gradient(145deg, #0A0F1E, #0D1525)", border: `1px solid ${color}40`, borderRadius: "20px", padding: "32px", maxWidth: "680px", width: "100%", maxHeight: "92vh", overflowY: "auto" }}>
 
-        <div style={{ marginBottom: "28px" }}>
-          <div style={{ fontSize: "8px", letterSpacing: "5px", color: color, marginBottom: "6px" }}>AI EXPERT PANEL</div>
-          <div style={{ fontSize: "20px", fontWeight: "900", letterSpacing: "2px", color: "#E2E8F0" }}>YOUR SCIENCE-BASED PROGRAM</div>
-          <div style={{ fontSize: "11px", color: "#4A5568", marginTop: "6px", letterSpacing: "1px" }}>Customized to your goals, experience, and schedule.</div>
+        {/* Header */}
+        <div style={{ marginBottom: "24px" }}>
+          <div style={{ fontSize: "9px", letterSpacing: "5px", color: color, fontFamily: MONO, marginBottom: "8px" }}>AI EXPERT PANEL</div>
+          <div style={{ fontSize: "22px", fontWeight: "800", color: "#E2E8F0", fontFamily: SANS, lineHeight: 1.2 }}>Your Science-Based Program</div>
+          <div style={{ fontSize: "14px", color: "#718096", marginTop: "6px", fontFamily: SANS }}>Built for your goals, experience, and schedule.</div>
         </div>
 
         {!generatedProgram && (
           <>
-            <div style={{ background: "#050810", borderRadius: "12px", padding: "20px", border: "1px solid #1a2744", marginBottom: "24px" }}>
-              <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "3px", marginBottom: "14px" }}>YOUR PROFILE</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                {[
-                  { label: "GOAL", value: prefs.goal || "Not set" },
-                  { label: "EXPERIENCE", value: prefs.experience || "Not set" },
-                  { label: "DAYS/WEEK", value: prefs.days || "Not set" },
-                  { label: "LIMITATIONS", value: prefs.limitation || "None" },
-                ].map((m) => (
-                  <div key={m.label}>
-                    <div style={{ fontSize: "8px", color: "#4A5568", letterSpacing: "2px" }}>{m.label}</div>
-                    <div style={{ fontSize: "11px", color: color, fontWeight: "700", marginTop: "2px" }}>{m.value}</div>
-                  </div>
-                ))}
+            {/* Profile summary */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
+              {[
+                { label: "GOAL", value: prefs.goal || "Not set" },
+                { label: "EXPERIENCE", value: prefs.experience || "Not set" },
+                { label: "DAYS/WEEK", value: prefs.days || "Not set" },
+                { label: "LIMITATIONS", value: prefs.limitation || "None" },
+              ].map((m) => (
+                <div key={m.label} style={{ background: "#050810", borderRadius: "10px", padding: "14px 16px", border: "1px solid #1a2744" }}>
+                  <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "2px", fontFamily: MONO, marginBottom: "4px" }}>{m.label}</div>
+                  <div style={{ fontSize: "14px", color: color, fontWeight: "600", fontFamily: SANS }}>{m.value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ background: `${color}08`, border: `1px solid ${color}20`, borderRadius: "12px", padding: "16px 20px", marginBottom: "24px" }}>
+              <div style={{ fontSize: "14px", color: "#94A3B8", lineHeight: "1.6", fontFamily: SANS }}>
+                A customized program rooted in periodization, biomechanics, and proven training science — generated just for you.
               </div>
             </div>
 
-            <div style={{ background: `${color}08`, border: `1px solid ${color}20`, borderRadius: "12px", padding: "16px", marginBottom: "24px" }}>
-              <div style={{ fontSize: "10px", color: "#718096", lineHeight: "1.8", letterSpacing: "1px" }}>
-                A fully customized, science-based program built for your goal, experience level, and schedule. Rooted in periodization theory, biomechanics, and proven training methodology.
-              </div>
-            </div>
-
-            {error && <div style={{ color: "#FF4444", fontSize: "11px", marginBottom: "16px", letterSpacing: "1px" }}>⚠ {error}</div>}
+            {error && <div style={{ color: "#FF4444", fontSize: "13px", marginBottom: "16px", fontFamily: SANS }}>⚠ {error}</div>}
 
             <div style={{ display: "flex", gap: "12px" }}>
-              <button onClick={generate} disabled={generating} style={{ flex: 1, padding: "16px", background: generating ? "#1a2744" : `linear-gradient(90deg, ${color}, #00D4FF)`, border: "none", borderRadius: "8px", cursor: generating ? "not-allowed" : "pointer", color: "#050810", fontWeight: "900", fontSize: "11px", letterSpacing: "3px", fontFamily: "'Courier New', monospace" }}>
-                {generating ? "CONSULTING EXPERT PANEL..." : "GENERATE MY PROGRAM →"}
+              <button onClick={generate} disabled={generating} style={{ flex: 1, padding: "16px", background: generating ? "#1a2744" : `linear-gradient(90deg, ${color}, #00D4FF)`, border: "none", borderRadius: "10px", cursor: generating ? "not-allowed" : "pointer", color: "#050810", fontWeight: "800", fontSize: "14px", fontFamily: SANS }}>
+                {generating ? "Building your program..." : "Generate My Program →"}
               </button>
-              <button onClick={onClose} style={{ padding: "16px 20px", background: "transparent", border: "1px solid #1a2744", borderRadius: "8px", cursor: "pointer", color: "#4A5568", fontSize: "10px", letterSpacing: "2px", fontFamily: "'Courier New', monospace" }}>CANCEL</button>
+              <button onClick={onClose} style={{ padding: "16px 20px", background: "transparent", border: "1px solid #1a2744", borderRadius: "10px", cursor: "pointer", color: "#4A5568", fontSize: "13px", fontFamily: SANS }}>Cancel</button>
             </div>
           </>
         )}
 
         {generatedProgram && (
           <>
-            <div style={{ background: `${color}08`, border: `1px solid ${color}30`, borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
-              <div style={{ fontSize: "16px", fontWeight: "900", color: color, letterSpacing: "2px", marginBottom: "8px" }}>{generatedProgram.program_name}</div>
-              <div style={{ fontSize: "11px", color: "#718096", lineHeight: "1.8", marginBottom: "12px" }}>{generatedProgram.philosophy}</div>
-              <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "2px" }}>PROGRESSION: <span style={{ color: "#E2E8F0" }}>{generatedProgram.progression_scheme}</span></div>
+            {/* Program header card */}
+            <div style={{ background: `${color}10`, border: `1px solid ${color}35`, borderRadius: "14px", padding: "20px 24px", marginBottom: "20px" }}>
+              <div style={{ fontSize: "18px", fontWeight: "800", color: color, fontFamily: SANS, marginBottom: "6px" }}>{generatedProgram.program_name}</div>
+              <div style={{ fontSize: "14px", color: "#94A3B8", lineHeight: "1.6", fontFamily: SANS, marginBottom: "12px" }}>{generatedProgram.philosophy}</div>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                <span style={{ fontSize: "9px", letterSpacing: "2px", color: "#4A5568", fontFamily: MONO, paddingTop: "2px", flexShrink: 0 }}>PROGRESSION</span>
+                <span style={{ fontSize: "13px", color: "#CBD5E1", fontFamily: SANS, lineHeight: 1.5 }}>{generatedProgram.progression_scheme}</span>
+              </div>
             </div>
 
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px" }}>
+            {/* Day tabs */}
+            <div style={{ display: "flex", gap: "8px", marginBottom: "20px", overflowX: "auto", paddingBottom: "4px" }}>
               {generatedProgram.days.map((day, i) => (
-                <button key={i} onClick={() => setActiveDay(i)} style={{ padding: "8px 14px", background: activeDay === i ? `${color}15` : "transparent", border: `1px solid ${activeDay === i ? color : "#1a2744"}`, borderRadius: "20px", cursor: "pointer", color: activeDay === i ? color : "#4A5568", fontSize: "9px", letterSpacing: "2px", fontFamily: "'Courier New', monospace" }}>DAY {day.day_number}</button>
+                <button key={i} onClick={() => setActiveDay(i)} style={{ flexShrink: 0, padding: "8px 18px", background: activeDay === i ? color : "transparent", border: `1px solid ${activeDay === i ? color : "#1a2744"}`, borderRadius: "20px", cursor: "pointer", color: activeDay === i ? "#050810" : "#718096", fontSize: "12px", fontWeight: activeDay === i ? "700" : "400", fontFamily: SANS, transition: "all 0.2s" }}>Day {day.day_number}</button>
               ))}
             </div>
 
+            {/* Day content */}
             {generatedProgram.days[activeDay] && (
               <div>
-                <div style={{ marginBottom: "16px" }}>
-                  <div style={{ fontSize: "12px", fontWeight: "900", color: "#E2E8F0", letterSpacing: "2px" }}>{generatedProgram.days[activeDay].day_name}</div>
-                  <div style={{ fontSize: "10px", color: "#4A5568", marginTop: "4px", letterSpacing: "1px" }}>{generatedProgram.days[activeDay].focus}</div>
+                <div style={{ marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #1a2744" }}>
+                  <div style={{ fontSize: "16px", fontWeight: "700", color: "#E2E8F0", fontFamily: SANS }}>{generatedProgram.days[activeDay].day_name}</div>
+                  <div style={{ fontSize: "13px", color: "#718096", marginTop: "4px", fontFamily: SANS }}>{generatedProgram.days[activeDay].focus}</div>
                 </div>
+
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   {generatedProgram.days[activeDay].exercises.map((ex, i) => (
-                    <div key={i} style={{ background: "#050810", border: "1px solid #1a2744", borderRadius: "10px", padding: "14px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
-                        <div>
-                          <div style={{ fontSize: "8px", color: "#4A5568", letterSpacing: "2px", marginBottom: "2px" }}>{ex.body_part} · {ex.equipment}</div>
-                          <div style={{ fontSize: "13px", fontWeight: "900", color: "#E2E8F0", letterSpacing: "1px" }}>{ex.name}</div>
+                    <div key={i} style={{ background: "#050D1A", border: "1px solid #1a2744", borderRadius: "12px", padding: "16px", transition: "border-color 0.2s" }}>
+                      {/* Exercise header */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginBottom: ex.coaching_note ? "12px" : "0" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "10px", color: "#4A5568", fontFamily: MONO, letterSpacing: "1px", marginBottom: "4px" }}>{ex.body_part} · {ex.equipment}</div>
+                          <div style={{ fontSize: "15px", fontWeight: "700", color: "#E2E8F0", fontFamily: SANS, lineHeight: 1.3 }}>{ex.name}</div>
                         </div>
-                        <div style={{ display: "flex", gap: "10px", flexShrink: 0 }}>
-                          {[{ label: "SETS", value: ex.sets }, { label: "REPS", value: ex.reps }, { label: "REST", value: `${ex.rest_seconds}s` }, { label: "RIR", value: ex.rir }].map((m) => (
-                            <div key={m.label} style={{ textAlign: "center" }}>
-                              <div style={{ fontSize: "7px", color: "#4A5568", letterSpacing: "1px" }}>{m.label}</div>
-                              <div style={{ fontSize: "11px", color: color, fontWeight: "900" }}>{m.value}</div>
-                            </div>
-                          ))}
+                        <div style={{ display: "flex", gap: "6px", flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                          <StatBadge label="SETS" value={ex.sets} color={color} />
+                          <StatBadge label="REPS" value={ex.reps} color={color} />
+                          <StatBadge label="REST" value={`${ex.rest_seconds}s`} color={color} />
+                          {ex.rir != null && <StatBadge label="RIR" value={ex.rir} color={color} />}
                         </div>
                       </div>
-                      {ex.coaching_note && <div style={{ fontSize: "10px", color: "#718096", lineHeight: "1.6", borderTop: "1px solid #1a2744", paddingTop: "8px", fontStyle: "italic" }}>"{ex.coaching_note}"</div>}
+                      {/* Coaching note */}
+                      {ex.coaching_note && (
+                        <div style={{ display: "flex", gap: "8px", alignItems: "flex-start", borderTop: "1px solid #1a2744", paddingTop: "10px" }}>
+                          <span style={{ color: color, fontSize: "12px", flexShrink: 0, marginTop: "1px" }}>💡</span>
+                          <span style={{ fontSize: "13px", color: "#718096", lineHeight: "1.5", fontFamily: SANS }}>{ex.coaching_note}</span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -616,8 +628,8 @@ function AIGeneratorModal({ user, onClose, onStart }) {
             )}
 
             <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
-              <button onClick={handleStart} style={{ flex: 1, padding: "16px", background: `linear-gradient(90deg, ${color}, #00D4FF)`, border: "none", borderRadius: "8px", cursor: "pointer", color: "#050810", fontWeight: "900", fontSize: "11px", letterSpacing: "3px", fontFamily: "'Courier New', monospace" }}>START THIS PROGRAM →</button>
-              <button onClick={() => { setGeneratedProgram(null); setError(""); }} style={{ padding: "16px 20px", background: "transparent", border: "1px solid #1a2744", borderRadius: "8px", cursor: "pointer", color: "#4A5568", fontSize: "10px", letterSpacing: "2px", fontFamily: "'Courier New', monospace" }}>REGENERATE</button>
+              <button onClick={handleStart} style={{ flex: 1, padding: "16px", background: `linear-gradient(90deg, ${color}, #00D4FF)`, border: "none", borderRadius: "10px", cursor: "pointer", color: "#050810", fontWeight: "800", fontSize: "15px", fontFamily: SANS }}>Start This Program →</button>
+              <button onClick={() => { setGeneratedProgram(null); setError(""); }} style={{ padding: "16px 20px", background: "transparent", border: "1px solid #1a2744", borderRadius: "10px", cursor: "pointer", color: "#4A5568", fontSize: "13px", fontFamily: SANS }}>Regenerate</button>
             </div>
           </>
         )}

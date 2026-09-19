@@ -473,19 +473,36 @@ function AIGeneratorModal({ user, onClose, onStart }) {
         limitation: prefs.limitation || "None",
         weeks: 8,
       };
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 110000);
+
+      // Kick off generation — returns immediately with job_id
       const res = await fetch(`${API}/api/v1/ai-programs/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
-        signal: controller.signal,
       });
-      clearTimeout(timeout);
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || `Server error ${res.status}`);
-      if (!data.program) throw new Error("No program returned from server");
-      setGeneratedProgram(data.program);
+
+      const jobId = data.job_id;
+
+      // Poll until complete
+      let attempts = 0;
+      while (attempts < 40) {
+        await new Promise(r => setTimeout(r, 3000));
+        const poll = await fetch(`${API}/api/v1/ai-programs/status/${jobId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const result = await poll.json();
+        if (result.status === "complete") {
+          setGeneratedProgram(result.program);
+          return;
+        }
+        if (result.status === "failed") {
+          throw new Error(result.error || "Generation failed");
+        }
+        attempts++;
+      }
+      throw new Error("Timed out waiting for program generation");
     } catch (err) {
       setError(err.message);
     } finally {

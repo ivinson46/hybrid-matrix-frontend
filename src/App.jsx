@@ -473,11 +473,15 @@ function AIGeneratorModal({ user, onClose, onStart }) {
         limitation: prefs.limitation || "None",
         weeks: 8,
       };
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 110000);
       const res = await fetch(`${API}/api/v1/ai-programs/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || `Server error ${res.status}`);
       if (!data.program) throw new Error("No program returned from server");

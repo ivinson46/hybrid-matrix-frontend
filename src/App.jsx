@@ -465,20 +465,22 @@ function AIGeneratorModal({ user, onClose, onStart }) {
     setError("");
     try {
       const token = localStorage.getItem("hm_token");
+      const payload = {
+        goal: prefs.goal || "General Fitness",
+        experience: prefs.experience || "Intermediate (1-3 years)",
+        days: prefs.days || "4 days",
+        gender: prefs.gender || "Both",
+        limitation: prefs.limitation || "None",
+        weeks: 8,
+      };
       const res = await fetch(`${API}/api/v1/ai-programs/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          goal: prefs.goal || "General Fitness",
-          experience: prefs.experience || "Intermediate (1-3 years)",
-          days: prefs.days || "4 days",
-          gender: prefs.gender || "Both",
-          limitation: prefs.limitation || "None",
-          weeks: 8,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Generation failed");
+      if (!res.ok) throw new Error(data.detail || `Server error ${res.status}`);
+      if (!data.program) throw new Error("No program returned from server");
       setGeneratedProgram(data.program);
     } catch (err) {
       setError(err.message);

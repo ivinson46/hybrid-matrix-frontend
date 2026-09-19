@@ -224,6 +224,16 @@ function WorkoutView({ program, onBack }) {
   const [logged, setLogged] = useState(false);
 
   useEffect(() => {
+    setCompletedSets({});
+    setLogged(false);
+
+    if (program.aiProgram) {
+      const dayData = program.aiProgram.days.find(d => d.day_number === currentDay);
+      setProgramExercises(dayData ? dayData.exercises.map((ex, i) => ({ ...ex, id: i })) : []);
+      setLoading(false);
+      return;
+    }
+
     const fetchExercises = async () => {
       setLoading(true);
       try {
@@ -237,8 +247,6 @@ function WorkoutView({ program, onBack }) {
       }
     };
     fetchExercises();
-    setCompletedSets({});
-    setLogged(false);
   }, [program.id, currentDay]);
 
   const prescription = programExercises.length > 0
@@ -438,6 +446,163 @@ function ProgramDetailModal({ program, onClose, onStart }) {
   );
 }
 
+function AIGeneratorModal({ user, onClose, onStart }) {
+  const [generating, setGenerating] = useState(false);
+  const [generatedProgram, setGeneratedProgram] = useState(null);
+  const [error, setError] = useState("");
+  const [activeDay, setActiveDay] = useState(0);
+
+  const prefs = user.preferences || {};
+  const goalMap = {
+    "Fat Loss": "Fat Loss", "Muscle & Strength": "Hypertrophy",
+    "Athletic Performance": "Athletic", "General Fitness": "General Fitness", "Glutes & Lower Body": "Glutes",
+  };
+  const category = goalMap[prefs.goal] || "General Fitness";
+  const color = getCategoryColor(category);
+
+  const generate = async () => {
+    setGenerating(true);
+    setError("");
+    try {
+      const token = localStorage.getItem("hm_token");
+      const res = await fetch(`${API}/api/v1/ai-programs/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          goal: prefs.goal || "General Fitness",
+          experience: prefs.experience || "Intermediate (1-3 years)",
+          days: prefs.days || "4 days",
+          gender: prefs.gender || "Both",
+          limitation: prefs.limitation || "None",
+          weeks: 8,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Generation failed");
+      setGeneratedProgram(data.program);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleStart = () => {
+    const synthetic = {
+      id: `ai-${Date.now()}`,
+      name: generatedProgram.program_name,
+      category,
+      days_per_week: generatedProgram.days.length,
+      weeks: 8,
+      intensity: "AI-Generated",
+      description: generatedProgram.philosophy,
+      aiProgram: generatedProgram,
+    };
+    onStart(synthetic);
+    onClose();
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.92)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", overflowY: "auto" }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "linear-gradient(145deg, #0A0F1E, #0D1525)", border: `1px solid ${color}40`, borderRadius: "16px", padding: "40px", maxWidth: "700px", width: "100%", fontFamily: "'Courier New', monospace", maxHeight: "90vh", overflowY: "auto" }}>
+
+        <div style={{ marginBottom: "28px" }}>
+          <div style={{ fontSize: "8px", letterSpacing: "5px", color: color, marginBottom: "6px" }}>AI EXPERT PANEL</div>
+          <div style={{ fontSize: "20px", fontWeight: "900", letterSpacing: "2px", color: "#E2E8F0" }}>GENERATE YOUR PROGRAM</div>
+          <div style={{ fontSize: "11px", color: "#4A5568", marginTop: "6px", letterSpacing: "1px" }}>Built by exercise physiologists, anatomists, and master trainers.</div>
+        </div>
+
+        {!generatedProgram && (
+          <>
+            <div style={{ background: "#050810", borderRadius: "12px", padding: "20px", border: "1px solid #1a2744", marginBottom: "24px" }}>
+              <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "3px", marginBottom: "14px" }}>YOUR PROFILE</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                {[
+                  { label: "GOAL", value: prefs.goal || "Not set" },
+                  { label: "EXPERIENCE", value: prefs.experience || "Not set" },
+                  { label: "DAYS/WEEK", value: prefs.days || "Not set" },
+                  { label: "LIMITATIONS", value: prefs.limitation || "None" },
+                ].map((m) => (
+                  <div key={m.label}>
+                    <div style={{ fontSize: "8px", color: "#4A5568", letterSpacing: "2px" }}>{m.label}</div>
+                    <div style={{ fontSize: "11px", color: color, fontWeight: "700", marginTop: "2px" }}>{m.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ background: `${color}08`, border: `1px solid ${color}20`, borderRadius: "12px", padding: "16px", marginBottom: "24px" }}>
+              <div style={{ fontSize: "10px", color: "#718096", lineHeight: "1.8", letterSpacing: "1px" }}>
+                The AI expert panel will design a program applying modern hypertrophy science, golden era training principles, periodization theory, and biomechanics — tailored precisely to your profile.
+              </div>
+            </div>
+
+            {error && <div style={{ color: "#FF4444", fontSize: "11px", marginBottom: "16px", letterSpacing: "1px" }}>⚠ {error}</div>}
+
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button onClick={generate} disabled={generating} style={{ flex: 1, padding: "16px", background: generating ? "#1a2744" : `linear-gradient(90deg, ${color}, #00D4FF)`, border: "none", borderRadius: "8px", cursor: generating ? "not-allowed" : "pointer", color: "#050810", fontWeight: "900", fontSize: "11px", letterSpacing: "3px", fontFamily: "'Courier New', monospace" }}>
+                {generating ? "CONSULTING EXPERT PANEL..." : "GENERATE MY PROGRAM →"}
+              </button>
+              <button onClick={onClose} style={{ padding: "16px 20px", background: "transparent", border: "1px solid #1a2744", borderRadius: "8px", cursor: "pointer", color: "#4A5568", fontSize: "10px", letterSpacing: "2px", fontFamily: "'Courier New', monospace" }}>CANCEL</button>
+            </div>
+          </>
+        )}
+
+        {generatedProgram && (
+          <>
+            <div style={{ background: `${color}08`, border: `1px solid ${color}30`, borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
+              <div style={{ fontSize: "16px", fontWeight: "900", color: color, letterSpacing: "2px", marginBottom: "8px" }}>{generatedProgram.program_name}</div>
+              <div style={{ fontSize: "11px", color: "#718096", lineHeight: "1.8", marginBottom: "12px" }}>{generatedProgram.philosophy}</div>
+              <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "2px" }}>PROGRESSION: <span style={{ color: "#E2E8F0" }}>{generatedProgram.progression_scheme}</span></div>
+            </div>
+
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px" }}>
+              {generatedProgram.days.map((day, i) => (
+                <button key={i} onClick={() => setActiveDay(i)} style={{ padding: "8px 14px", background: activeDay === i ? `${color}15` : "transparent", border: `1px solid ${activeDay === i ? color : "#1a2744"}`, borderRadius: "20px", cursor: "pointer", color: activeDay === i ? color : "#4A5568", fontSize: "9px", letterSpacing: "2px", fontFamily: "'Courier New', monospace" }}>DAY {day.day_number}</button>
+              ))}
+            </div>
+
+            {generatedProgram.days[activeDay] && (
+              <div>
+                <div style={{ marginBottom: "16px" }}>
+                  <div style={{ fontSize: "12px", fontWeight: "900", color: "#E2E8F0", letterSpacing: "2px" }}>{generatedProgram.days[activeDay].day_name}</div>
+                  <div style={{ fontSize: "10px", color: "#4A5568", marginTop: "4px", letterSpacing: "1px" }}>{generatedProgram.days[activeDay].focus}</div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {generatedProgram.days[activeDay].exercises.map((ex, i) => (
+                    <div key={i} style={{ background: "#050810", border: "1px solid #1a2744", borderRadius: "10px", padding: "14px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                        <div>
+                          <div style={{ fontSize: "8px", color: "#4A5568", letterSpacing: "2px", marginBottom: "2px" }}>{ex.body_part} · {ex.equipment}</div>
+                          <div style={{ fontSize: "13px", fontWeight: "900", color: "#E2E8F0", letterSpacing: "1px" }}>{ex.name}</div>
+                        </div>
+                        <div style={{ display: "flex", gap: "10px", flexShrink: 0 }}>
+                          {[{ label: "SETS", value: ex.sets }, { label: "REPS", value: ex.reps }, { label: "REST", value: `${ex.rest_seconds}s` }, { label: "RIR", value: ex.rir }].map((m) => (
+                            <div key={m.label} style={{ textAlign: "center" }}>
+                              <div style={{ fontSize: "7px", color: "#4A5568", letterSpacing: "1px" }}>{m.label}</div>
+                              <div style={{ fontSize: "11px", color: color, fontWeight: "900" }}>{m.value}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {ex.coaching_note && <div style={{ fontSize: "10px", color: "#718096", lineHeight: "1.6", borderTop: "1px solid #1a2744", paddingTop: "8px", fontStyle: "italic" }}>"{ex.coaching_note}"</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
+              <button onClick={handleStart} style={{ flex: 1, padding: "16px", background: `linear-gradient(90deg, ${color}, #00D4FF)`, border: "none", borderRadius: "8px", cursor: "pointer", color: "#050810", fontWeight: "900", fontSize: "11px", letterSpacing: "3px", fontFamily: "'Courier New', monospace" }}>START THIS PROGRAM →</button>
+              <button onClick={() => { setGeneratedProgram(null); setError(""); }} style={{ padding: "16px 20px", background: "transparent", border: "1px solid #1a2744", borderRadius: "8px", cursor: "pointer", color: "#4A5568", fontSize: "10px", letterSpacing: "2px", fontFamily: "'Courier New', monospace" }}>REGENERATE</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Dashboard({ user, onLogout, onUpdateUser }) {
   const [programs, setPrograms] = useState([]);
   const [exercises, setExercises] = useState([]);
@@ -446,6 +611,7 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
   const [selectedProgram, setSelectedProgram] = useState(null);
   const [activeProgram, setActiveProgram] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(!user.onboarded);
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
 
   const filters = ["All", "Fat Loss", "Hypertrophy", "Strength", "Athletic", "General Fitness", "Glutes"];
@@ -512,6 +678,7 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #050810 0%, #080D1A 100%)", fontFamily: "'Courier New', monospace", color: "#E2E8F0" }}>
       {showOnboarding && <OnboardingModal userName={user.name} onComplete={handleOnboardingComplete} />}
       {selectedProgram && <ProgramDetailModal program={selectedProgram} onClose={() => setSelectedProgram(null)} onStart={handleStartProgram} />}
+      {showAIGenerator && <AIGeneratorModal user={user} onClose={() => setShowAIGenerator(false)} onStart={handleStartProgram} />}
 
       <div style={{ borderBottom: "1px solid #1a2744", padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#05081099", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 100 }}>
         <div>
@@ -540,7 +707,7 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
           </div>
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
             <button onClick={() => setShowOnboarding(true)} style={{ padding: "12px 20px", background: "transparent", border: "1px solid #00FF8730", borderRadius: "8px", cursor: "pointer", color: "#00FF87", fontSize: "10px", letterSpacing: "2px", fontFamily: "'Courier New', monospace" }}>RETAKE QUIZ →</button>
-            <button style={{ padding: "14px 28px", background: "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "8px", cursor: "pointer", color: "#050810", fontWeight: "900", fontSize: "11px", letterSpacing: "3px", fontFamily: "'Courier New', monospace" }}>UPGRADE TIER →</button>
+            <button onClick={() => setShowAIGenerator(true)} style={{ padding: "14px 28px", background: "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "8px", cursor: "pointer", color: "#050810", fontWeight: "900", fontSize: "11px", letterSpacing: "3px", fontFamily: "'Courier New', monospace" }}>⚡ AI GENERATE →</button>
           </div>
         </div>
 

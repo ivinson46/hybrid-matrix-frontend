@@ -114,7 +114,16 @@ function AuthModal({ mode, onClose, onSuccess }) {
   const [form, setForm] = useState({ email: "", password: "", full_name: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [resetMode, setResetMode] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [resetDone, setResetDone] = useState(false);
+
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
   const submit = async () => {
     setError(""); setLoading(true);
     try {
@@ -127,32 +136,109 @@ function AuthModal({ mode, onClose, onSuccess }) {
       if (!res.ok) throw new Error(data.detail || "Something went wrong");
       const displayName = data.full_name ? data.full_name : form.email.split("@")[0];
       localStorage.setItem("hm_token", data.access_token);
-      localStorage.setItem("hm_user", JSON.stringify({ id: data.user_id, name: displayName, tier: data.tier, email: form.email, onboarded: false }));
+      localStorage.setItem("hm_user", JSON.stringify({ id: data.user_id, name: displayName, tier: data.tier, role: data.account_type, email: form.email, onboarded: false }));
       onSuccess({ ...data, resolvedName: displayName });
     } catch (err) { setError(err.message); } finally { setLoading(false); }
   };
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: "linear-gradient(145deg, #0A0F1E, #0D1525)", border: "1px solid #1a2744", borderRadius: "16px", padding: "40px", width: "100%", maxWidth: "420px", fontFamily: "'Courier New', monospace" }}>
-        <div style={{ textAlign: "center", marginBottom: "32px" }}>
-          <div style={{ fontSize: "9px", letterSpacing: "6px", color: "#00FF87", marginBottom: "6px" }}>HYBRID MATRIX</div>
-          <div style={{ fontSize: "11px", color: "#4A5568", letterSpacing: "3px" }}>CORE ENGINE v2.0</div>
+
+  const submitForgot = async () => {
+    setError(""); setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/v1/auth/forgot-password`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+      const data = await res.json();
+      if (data.reset_token) { setResetToken(data.reset_token); setResetMode(true); }
+      else setError("No account found with that email.");
+    } catch { setError("Something went wrong. Try again."); } finally { setLoading(false); }
+  };
+
+  const submitReset = async () => {
+    if (newPassword !== confirmPassword) { setError("Passwords don't match."); return; }
+    setError(""); setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/v1/auth/reset-password`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: resetToken, new_password: newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Reset failed");
+      setResetDone(true);
+    } catch (err) { setError(err.message); } finally { setLoading(false); }
+  };
+
+  const overlayStyle = { position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center" };
+  const cardStyle = { background: "linear-gradient(145deg, #0A0F1E, #0D1525)", border: "1px solid #1a2744", borderRadius: "20px", padding: "36px", width: "100%", maxWidth: "420px" };
+
+  // ── Forgot password screens ──
+  if (forgotMode) {
+    return (
+      <div style={overlayStyle} onClick={onClose}>
+        <div onClick={(e) => e.stopPropagation()} style={cardStyle}>
+          <div style={{ textAlign: "center", marginBottom: "28px" }}>
+            <div style={{ fontSize: "9px", letterSpacing: "5px", color: "#00FF87", fontFamily: MONO, marginBottom: "8px" }}>HYBRID MATRIX</div>
+            {resetDone ? (
+              <>
+                <div style={{ fontSize: "22px", marginBottom: "10px" }}>✅</div>
+                <div style={{ fontSize: "18px", fontWeight: "700", color: "#E2E8F0", fontFamily: SANS }}>Password Updated</div>
+                <div style={{ fontSize: "14px", color: "#718096", fontFamily: SANS, marginTop: "8px" }}>You can now log in with your new password.</div>
+                <button onClick={() => { setForgotMode(false); setResetMode(false); setResetDone(false); setTab("login"); }} style={{ marginTop: "24px", width: "100%", padding: "14px", background: "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "10px", cursor: "pointer", color: "#050810", fontWeight: "700", fontSize: "15px", fontFamily: SANS }}>Back to Login</button>
+              </>
+            ) : resetMode ? (
+              <>
+                <div style={{ fontSize: "18px", fontWeight: "700", color: "#E2E8F0", fontFamily: SANS }}>Set New Password</div>
+                <div style={{ fontSize: "14px", color: "#718096", fontFamily: SANS, marginTop: "6px" }}>Choose a new password for your account.</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "24px", textAlign: "left" }}>
+                  <input type="password" placeholder="New password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={{ ...inputStyle, fontFamily: SANS, fontSize: "14px", letterSpacing: "0" }} />
+                  <input type="password" placeholder="Confirm password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && submitReset()} style={{ ...inputStyle, fontFamily: SANS, fontSize: "14px", letterSpacing: "0" }} />
+                </div>
+                {error && <div style={{ color: "#FF4444", fontSize: "13px", marginTop: "12px", fontFamily: SANS }}>⚠ {error}</div>}
+                <button onClick={submitReset} disabled={loading} style={{ marginTop: "20px", width: "100%", padding: "14px", background: loading ? "#1a2744" : "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "10px", cursor: "pointer", color: "#050810", fontWeight: "700", fontSize: "15px", fontFamily: SANS }}>{loading ? "Updating..." : "Update Password"}</button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: "18px", fontWeight: "700", color: "#E2E8F0", fontFamily: SANS }}>Reset Password</div>
+                <div style={{ fontSize: "14px", color: "#718096", fontFamily: SANS, marginTop: "6px" }}>Enter your email and we'll send a reset link.</div>
+                <div style={{ marginTop: "24px", textAlign: "left" }}>
+                  <input type="email" placeholder="Your email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && submitForgot()} style={{ ...inputStyle, fontFamily: SANS, fontSize: "14px", letterSpacing: "0" }} />
+                </div>
+                {error && <div style={{ color: "#FF4444", fontSize: "13px", marginTop: "12px", fontFamily: SANS }}>⚠ {error}</div>}
+                <button onClick={submitForgot} disabled={loading} style={{ marginTop: "20px", width: "100%", padding: "14px", background: loading ? "#1a2744" : "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "10px", cursor: "pointer", color: "#050810", fontWeight: "700", fontSize: "15px", fontFamily: SANS }}>{loading ? "Sending..." : "Send Reset Link"}</button>
+                <button onClick={() => setForgotMode(false)} style={{ marginTop: "10px", width: "100%", padding: "12px", background: "transparent", border: "1px solid #1a2744", borderRadius: "10px", cursor: "pointer", color: "#4A5568", fontSize: "14px", fontFamily: SANS }}>Back to Login</button>
+              </>
+            )}
+          </div>
         </div>
-        <div style={{ display: "flex", marginBottom: "28px", border: "1px solid #1a2744", borderRadius: "8px", overflow: "hidden" }}>
+      </div>
+    );
+  }
+
+  return (
+    <div style={overlayStyle} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={cardStyle}>
+        <div style={{ textAlign: "center", marginBottom: "28px" }}>
+          <div style={{ fontSize: "9px", letterSpacing: "6px", color: "#00FF87", marginBottom: "6px", fontFamily: MONO }}>HYBRID MATRIX</div>
+          <div style={{ fontSize: "11px", color: "#4A5568", letterSpacing: "3px", fontFamily: MONO }}>CORE ENGINE v2.0</div>
+        </div>
+        <div style={{ display: "flex", marginBottom: "24px", border: "1px solid #1a2744", borderRadius: "8px", overflow: "hidden" }}>
           {["login", "register"].map((t) => (
-            <button key={t} onClick={() => { setTab(t); setError(""); }} style={{ flex: 1, padding: "12px", background: tab === t ? "#00FF8715" : "transparent", border: "none", cursor: "pointer", color: tab === t ? "#00FF87" : "#4A5568", fontSize: "10px", letterSpacing: "3px", fontFamily: "'Courier New', monospace", borderBottom: tab === t ? "2px solid #00FF87" : "2px solid transparent" }}>{t.toUpperCase()}</button>
+            <button key={t} onClick={() => { setTab(t); setError(""); }} style={{ flex: 1, padding: "12px", background: tab === t ? "#00FF8715" : "transparent", border: "none", cursor: "pointer", color: tab === t ? "#00FF87" : "#4A5568", fontSize: "13px", fontWeight: tab === t ? "600" : "400", fontFamily: SANS, borderBottom: tab === t ? "2px solid #00FF87" : "2px solid transparent" }}>{t === "login" ? "Log In" : "Register"}</button>
           ))}
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          {tab === "register" && <input name="full_name" placeholder="FULL NAME" value={form.full_name} onChange={handle} style={inputStyle} />}
-          <input name="email" placeholder="EMAIL" type="email" value={form.email} onChange={handle} style={inputStyle} />
-          <input name="password" placeholder="PASSWORD" type="password" value={form.password} onChange={handle} onKeyDown={(e) => e.key === "Enter" && submit()} style={inputStyle} />
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {tab === "register" && <input name="full_name" placeholder="Full name" value={form.full_name} onChange={handle} style={{ ...inputStyle, fontFamily: SANS, fontSize: "14px", letterSpacing: "0" }} />}
+          <input name="email" placeholder="Email" type="email" value={form.email} onChange={handle} style={{ ...inputStyle, fontFamily: SANS, fontSize: "14px", letterSpacing: "0" }} />
+          <input name="password" placeholder="Password" type="password" value={form.password} onChange={handle} onKeyDown={(e) => e.key === "Enter" && submit()} style={{ ...inputStyle, fontFamily: SANS, fontSize: "14px", letterSpacing: "0" }} />
         </div>
-        {error && <div style={{ marginTop: "14px", color: "#FF4444", fontSize: "11px", letterSpacing: "1px" }}>⚠ {error}</div>}
-        <button onClick={submit} disabled={loading} style={{ marginTop: "24px", width: "100%", padding: "14px", background: loading ? "#1a2744" : "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "8px", cursor: loading ? "not-allowed" : "pointer", color: "#050810", fontWeight: "900", fontSize: "12px", letterSpacing: "3px", fontFamily: "'Courier New', monospace" }}>
-          {loading ? "PROCESSING..." : tab === "register" ? "CREATE ACCOUNT" : "ENTER MATRIX"}
+        {tab === "login" && (
+          <button onClick={() => { setForgotMode(true); setError(""); }} style={{ marginTop: "10px", background: "none", border: "none", cursor: "pointer", color: "#00FF87", fontSize: "13px", fontFamily: SANS, padding: 0 }}>Forgot password?</button>
+        )}
+        {error && <div style={{ marginTop: "12px", color: "#FF4444", fontSize: "13px", fontFamily: SANS }}>⚠ {error}</div>}
+        <button onClick={submit} disabled={loading} style={{ marginTop: "20px", width: "100%", padding: "14px", background: loading ? "#1a2744" : "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "10px", cursor: loading ? "not-allowed" : "pointer", color: "#050810", fontWeight: "700", fontSize: "15px", fontFamily: SANS }}>
+          {loading ? "Processing..." : tab === "register" ? "Create Account" : "Enter Matrix"}
         </button>
-        <button onClick={onClose} style={{ marginTop: "14px", width: "100%", padding: "10px", background: "transparent", border: "1px solid #1a2744", borderRadius: "8px", cursor: "pointer", color: "#4A5568", fontSize: "10px", letterSpacing: "2px", fontFamily: "'Courier New', monospace" }}>CANCEL</button>
+        <button onClick={onClose} style={{ marginTop: "10px", width: "100%", padding: "12px", background: "transparent", border: "1px solid #1a2744", borderRadius: "10px", cursor: "pointer", color: "#4A5568", fontSize: "14px", fontFamily: SANS }}>Cancel</button>
       </div>
     </div>
   );
@@ -638,6 +724,151 @@ function AIGeneratorModal({ user, onClose, onStart }) {
   );
 }
 
+const TIERS = ["starter", "builder", "athlete", "elite_matrix", "vip_matrix"];
+const ROLES = ["user", "admin"];
+const TIER_COLORS = { starter: "#718096", builder: "#00D4FF", athlete: "#A855F7", elite_matrix: "#00FF87", vip_matrix: "#FF6B35" };
+
+function AdminDashboard({ user, onBack }) {
+  const [stats, setStats] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState({});
+
+  const token = localStorage.getItem("hm_token");
+  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+
+  const fetchData = async (q = "") => {
+    setLoading(true);
+    try {
+      const [statsRes, usersRes] = await Promise.all([
+        fetch(`${API}/api/v1/admin/stats`, { headers }),
+        fetch(`${API}/api/v1/admin/users${q ? `?search=${encodeURIComponent(q)}` : ""}`, { headers }),
+      ]);
+      const s = await statsRes.json();
+      const u = await usersRes.json();
+      setStats(s);
+      setUsers(u.users || []);
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  const updateUser = async (userId, field, value) => {
+    setSaving(p => ({ ...p, [userId]: true }));
+    try {
+      await fetch(`${API}/api/v1/admin/users/${userId}`, {
+        method: "PATCH", headers,
+        body: JSON.stringify({ [field]: value }),
+      });
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, [field]: value } : u));
+    } catch (err) { console.error(err); }
+    finally { setSaving(p => ({ ...p, [userId]: false })); }
+  };
+
+  const statCards = stats ? [
+    { label: "Total Users", value: stats.total_users, color: "#00FF87" },
+    { label: "Workouts Logged", value: stats.total_workouts, color: "#00D4FF" },
+    { label: "AI Programs Built", value: stats.total_ai_programs, color: "#A855F7" },
+    { label: "New Today", value: stats.new_today, color: "#FF6B35" },
+  ] : [];
+
+  return (
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #050810 0%, #080D1A 100%)", color: "#E2E8F0" }}>
+      {/* Header */}
+      <div style={{ borderBottom: "1px solid #1a2744", padding: "18px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#05081099", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 100 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <button onClick={onBack} style={{ background: "transparent", border: "1px solid #1a2744", padding: "8px 14px", cursor: "pointer", color: "#718096", fontSize: "13px", fontFamily: SANS, borderRadius: "8px" }}>← Back</button>
+          <div>
+            <div style={{ fontSize: "9px", letterSpacing: "4px", color: "#00FF87", fontFamily: MONO }}>ADMIN</div>
+            <div style={{ fontSize: "16px", fontWeight: "700", fontFamily: SANS }}>Control Panel</div>
+          </div>
+        </div>
+        <div style={{ fontSize: "13px", color: "#4A5568", fontFamily: SANS }}>{user.name} · {user.tier}</div>
+      </div>
+
+      <div style={{ padding: "32px", maxWidth: "1100px", margin: "0 auto" }}>
+
+        {/* Stat cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "14px", marginBottom: "32px" }}>
+          {statCards.map(s => (
+            <div key={s.label} style={{ background: "linear-gradient(145deg, #0D1525, #111827)", border: `1px solid ${s.color}30`, borderRadius: "14px", padding: "20px 24px" }}>
+              <div style={{ fontSize: "10px", color: "#4A5568", letterSpacing: "2px", fontFamily: MONO, marginBottom: "8px" }}>{s.label.toUpperCase()}</div>
+              <div style={{ fontSize: "32px", fontWeight: "700", color: s.color, fontFamily: SANS }}>{loading ? "—" : s.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tier breakdown */}
+        {stats?.users_by_tier?.length > 0 && (
+          <div style={{ background: "linear-gradient(145deg, #0D1525, #111827)", border: "1px solid #1a2744", borderRadius: "14px", padding: "20px 24px", marginBottom: "28px" }}>
+            <div style={{ fontSize: "10px", letterSpacing: "3px", color: "#4A5568", fontFamily: MONO, marginBottom: "14px" }}>USERS BY TIER</div>
+            <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+              {stats.users_by_tier.map(t => (
+                <div key={t.tier} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: TIER_COLORS[t.tier] || "#718096" }} />
+                  <span style={{ fontSize: "14px", color: "#E2E8F0", fontFamily: SANS }}>{t.tier}</span>
+                  <span style={{ fontSize: "14px", fontWeight: "700", color: TIER_COLORS[t.tier] || "#718096", fontFamily: SANS }}>{t.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* User table */}
+        <div style={{ background: "linear-gradient(145deg, #0D1525, #111827)", border: "1px solid #1a2744", borderRadius: "14px", padding: "24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+            <div style={{ fontSize: "10px", letterSpacing: "3px", color: "#4A5568", fontFamily: MONO }}>ALL USERS</div>
+            <input
+              placeholder="Search by name or email..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && fetchData(search)}
+              style={{ ...inputStyle, maxWidth: "280px", fontFamily: SANS, fontSize: "14px", letterSpacing: "0", padding: "10px 14px" }}
+            />
+          </div>
+
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "40px", color: "#4A5568", fontFamily: SANS }}>Loading users...</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {users.map(u => (
+                <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "12px", alignItems: "center", background: "#050D1A", borderRadius: "10px", padding: "14px 16px", border: "1px solid #1a2744" }}>
+                  <div>
+                    <div style={{ fontSize: "14px", fontWeight: "600", color: "#E2E8F0", fontFamily: SANS }}>{u.full_name || "—"}</div>
+                    <div style={{ fontSize: "12px", color: "#4A5568", fontFamily: SANS, marginTop: "2px" }}>{u.email}</div>
+                  </div>
+                  {/* Tier selector */}
+                  <select
+                    value={u.tier || "starter"}
+                    onChange={e => updateUser(u.id, "tier", e.target.value)}
+                    disabled={saving[u.id]}
+                    style={{ background: "#0A0F1E", border: `1px solid ${TIER_COLORS[u.tier] || "#1a2744"}`, borderRadius: "8px", color: TIER_COLORS[u.tier] || "#718096", padding: "6px 10px", fontSize: "12px", fontFamily: SANS, cursor: "pointer" }}
+                  >
+                    {TIERS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  {/* Role selector */}
+                  <select
+                    value={u.role || "user"}
+                    onChange={e => updateUser(u.id, "role", e.target.value)}
+                    disabled={saving[u.id]}
+                    style={{ background: "#0A0F1E", border: "1px solid #1a2744", borderRadius: "8px", color: u.role === "admin" ? "#00FF87" : "#718096", padding: "6px 10px", fontSize: "12px", fontFamily: SANS, cursor: "pointer" }}
+                  >
+                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                  {/* Status dot */}
+                  <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: u.is_active !== false ? "#00FF87" : "#FF4444", flexShrink: 0 }} title={u.is_active !== false ? "Active" : "Inactive"} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Dashboard({ user, onLogout, onUpdateUser }) {
   const [programs, setPrograms] = useState([]);
   const [exercises, setExercises] = useState([]);
@@ -647,6 +878,7 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
   const [activeProgram, setActiveProgram] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(!user.onboarded);
   const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
 
   const filters = ["All", "Fat Loss", "Hypertrophy", "Strength", "Athletic", "General Fitness", "Glutes"];
@@ -709,6 +941,10 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
     return <WorkoutView program={activeProgram} onBack={() => setActiveProgram(null)} />;
   }
 
+  if (showAdmin) {
+    return <AdminDashboard user={user} onBack={() => setShowAdmin(false)} />;
+  }
+
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #050810 0%, #080D1A 100%)", fontFamily: "'Courier New', monospace", color: "#E2E8F0" }}>
       {showOnboarding && <OnboardingModal userName={user.name} onComplete={handleOnboardingComplete} />}
@@ -725,7 +961,10 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
             <div style={{ fontSize: "11px", color: "#E2E8F0", letterSpacing: "1px" }}>{user.name.toUpperCase()}</div>
             <div style={{ fontSize: "9px", letterSpacing: "2px", color: "#00FF87", background: "#00FF8715", padding: "2px 8px", borderRadius: "4px", border: "1px solid #00FF8730", display: "inline-block", marginTop: "2px" }}>{user.tier?.toUpperCase() || "STARTER"}</div>
           </div>
-          <button onClick={onLogout} style={{ background: "transparent", border: "1px solid #1a2744", padding: "8px 16px", cursor: "pointer", color: "#4A5568", fontSize: "9px", letterSpacing: "2px", fontFamily: "'Courier New', monospace", borderRadius: "6px" }}>LOGOUT</button>
+          {user.role === "admin" && (
+            <button onClick={() => setShowAdmin(true)} style={{ background: "#00FF8712", border: "1px solid #00FF8740", padding: "8px 14px", cursor: "pointer", color: "#00FF87", fontSize: "12px", fontFamily: SANS, borderRadius: "6px", fontWeight: "600" }}>Admin</button>
+          )}
+          <button onClick={onLogout} style={{ background: "transparent", border: "1px solid #1a2744", padding: "8px 16px", cursor: "pointer", color: "#4A5568", fontSize: "12px", fontFamily: SANS, borderRadius: "6px" }}>Logout</button>
         </div>
       </div>
 
@@ -791,7 +1030,7 @@ export default function HybridMatrix() {
   }, []);
 
   const handleAuthSuccess = (data) => {
-    setUser({ id: data.user_id, name: data.resolvedName, tier: data.tier, onboarded: false });
+    setUser({ id: data.user_id, name: data.resolvedName, tier: data.tier, role: data.account_type, onboarded: false });
     setAuthModal(null);
   };
 

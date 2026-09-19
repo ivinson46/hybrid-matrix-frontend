@@ -510,8 +510,8 @@ function AIGeneratorModal({ user, onClose, onStart }) {
 
         <div style={{ marginBottom: "28px" }}>
           <div style={{ fontSize: "8px", letterSpacing: "5px", color: color, marginBottom: "6px" }}>AI EXPERT PANEL</div>
-          <div style={{ fontSize: "20px", fontWeight: "900", letterSpacing: "2px", color: "#E2E8F0" }}>GENERATE YOUR PROGRAM</div>
-          <div style={{ fontSize: "11px", color: "#4A5568", marginTop: "6px", letterSpacing: "1px" }}>Built by exercise physiologists, anatomists, and master trainers.</div>
+          <div style={{ fontSize: "20px", fontWeight: "900", letterSpacing: "2px", color: "#E2E8F0" }}>YOUR SCIENCE-BASED PROGRAM</div>
+          <div style={{ fontSize: "11px", color: "#4A5568", marginTop: "6px", letterSpacing: "1px" }}>Customized to your goals, experience, and schedule.</div>
         </div>
 
         {!generatedProgram && (
@@ -535,7 +535,7 @@ function AIGeneratorModal({ user, onClose, onStart }) {
 
             <div style={{ background: `${color}08`, border: `1px solid ${color}20`, borderRadius: "12px", padding: "16px", marginBottom: "24px" }}>
               <div style={{ fontSize: "10px", color: "#718096", lineHeight: "1.8", letterSpacing: "1px" }}>
-                The AI expert panel will design a program applying modern hypertrophy science, golden era training principles, periodization theory, and biomechanics — tailored precisely to your profile.
+                A fully customized, science-based program built for your goal, experience level, and schedule. Rooted in periodization theory, biomechanics, and proven training methodology.
               </div>
             </div>
 

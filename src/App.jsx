@@ -1055,6 +1055,23 @@ function Dashboard({ user, onLogout, onUpdateUser, lang, onToggleLang }) {
           </div>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             <button onClick={() => setShowOnboarding(true)} style={{ padding: "11px 18px", background: "transparent", border: "1px solid #00FF8730", borderRadius: "8px", cursor: "pointer", color: "#00FF87", fontSize: "12px", fontFamily: SANS }}>{t("retake_quiz")}</button>
+            {currentUserProgram ? (
+              <button
+                onClick={() => setActiveProgram({
+                  id: `saved-${currentUserProgram.id}`,
+                  name: currentUserProgram.program_name,
+                  category: currentUserProgram.category,
+                  days_per_week: currentUserProgram.days_per_week,
+                  weeks: currentUserProgram.weeks,
+                  intensity: "AI-Generated",
+                  description: currentUserProgram.program_data?.philosophy || "",
+                  aiProgram: currentUserProgram.program_data,
+                })}
+                style={{ padding: "12px 22px", background: "#00FF8712", border: "1px solid #00FF8750", borderRadius: "8px", cursor: "pointer", color: "#00FF87", fontWeight: "700", fontSize: "13px", fontFamily: SANS }}
+              >▶ Current Program</button>
+            ) : (
+              <button disabled style={{ padding: "12px 22px", background: "transparent", border: "1px solid #1a2744", borderRadius: "8px", cursor: "not-allowed", color: "#2a3a54", fontSize: "13px", fontFamily: SANS }}>▶ Current Program</button>
+            )}
             <button onClick={() => setShowAIGenerator(true)} style={{ padding: "12px 24px", background: "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "8px", cursor: "pointer", color: "#050810", fontWeight: "800", fontSize: "14px", fontFamily: SANS }}>{t("ai_generate")}</button>
           </div>
         </div>

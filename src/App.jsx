@@ -945,6 +945,15 @@ function Dashboard({ user, onLogout, onUpdateUser, lang, onToggleLang }) {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (activeProgram) return;
+    const token = localStorage.getItem("hm_token");
+    fetch(`${API}/api/v1/user-programs/current`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setCurrentUserProgram(d.program || null); })
+      .catch(() => {});
+  }, [activeProgram]);
+
   const saveBodyStats = async () => {
     setSavingStats(true);
     try {
@@ -1018,7 +1027,7 @@ function Dashboard({ user, onLogout, onUpdateUser, lang, onToggleLang }) {
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #050810 0%, #080D1A 100%)", color: "#E2E8F0" }}>
       {showOnboarding && <OnboardingModal userName={user.name} onComplete={handleOnboardingComplete} />}
       {selectedProgram && <ProgramDetailModal program={selectedProgram} onClose={() => setSelectedProgram(null)} onStart={handleStartProgram} />}
-      {showAIGenerator && <AIGeneratorModal user={user} onClose={() => setShowAIGenerator(false)} onStart={(p) => { handleStartProgram(p); setCurrentUserProgram(null); }} />}
+      {showAIGenerator && <AIGeneratorModal user={user} onClose={() => setShowAIGenerator(false)} onStart={handleStartProgram} />}
 
       {/* Header */}
       <div style={{ borderBottom: "1px solid #1a2744", padding: `16px ${px}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: "#05081099", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 100 }}>

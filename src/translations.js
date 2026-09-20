@@ -247,15 +247,15 @@ const translations = {
 
     // ── Onboarding Questions ──
     q_goal: "¿Cuál es tu objetivo principal?",
-    q_experience: "¿Cuál es tu experiencia de entrenamiento?",
+    q_experience: "¿Cuánto tiempo llevas entrenando?",
     q_days: "¿Cuántos días por semana puedes entrenar?",
-    q_gender: "¿Qué biblioteca de programas se adapta mejor a ti?",
-    q_limitation: "¿Tienes alguna limitación física o lesión?",
+    q_gender: "¿Qué tipo de programas buscas?",
+    q_limitation: "¿Tienes alguna lesión o limitación física?",
 
     // ── Goal options ──
-    goal_fat_loss: "Pérdida de grasa",
-    goal_muscle: "Músculo y fuerza",
-    goal_athletic: "Rendimiento atlético",
+    goal_fat_loss: "Quemar grasa",
+    goal_muscle: "Ganar músculo y fuerza",
+    goal_athletic: "Rendimiento deportivo",
     goal_general: "Fitness general",
     goal_glutes: "Glúteos y tren inferior",
 
@@ -283,16 +283,16 @@ const translations = {
     limit_other: "Otra / Múltiples",
 
     // ── Dashboard ──
-    welcome_back: "BIENVENIDO DE NUEVO",
-    matrix_ready: "TU MATRIX DE ENTRENAMIENTO ESTÁ LISTO",
+    welcome_back: "DE VUELTA AL GYM",
+    matrix_ready: "TU MATRIX ESTÁ LISTA",
     current_tier: "NIVEL ACTUAL",
-    programs_matched: "{n} programas según tus objetivos",
-    retake_quiz: "REPETIR CUESTIONARIO →",
+    programs_matched: "{n} programas para tus metas",
+    retake_quiz: "VOLVER A EMPEZAR →",
     ai_generate: "⚡ GENERAR CON IA →",
 
     // ── Filters ──
     filter_all: "Todos",
-    filter_fat_loss: "Pérdida de grasa",
+    filter_fat_loss: "Quemar grasa",
     filter_hypertrophy: "Hipertrofia",
     filter_strength: "Fuerza",
     filter_athletic: "Atlético",
@@ -335,8 +335,8 @@ const translations = {
     exercises_tap: "EJERCICIOS — TOCA SERIES PARA REGISTRAR",
     loading_workout: "Cargando entrenamiento...",
     reps_unit: "{n} reps",
-    workout_complete: "¡Entrenamiento completado!",
-    day_logged: "Día {n} registrado.",
+    workout_complete: "¡Lo lograste! Sesión terminada.",
+    day_logged: "Día {n} guardado.",
     back_to_programs: "Volver a programas",
     day_nav: "Día {n}",
     watch: "VER",
@@ -353,8 +353,8 @@ const translations = {
     limitations_label: "LIMITACIONES",
     ai_description: "Un programa personalizado basado en periodización, biomecánica y metodología de entrenamiento probada — generado solo para ti.",
     generate_btn: "Generar mi programa →",
-    generating: "Construyendo tu programa...",
-    start_this_program: "Iniciar este programa →",
+    generating: "Armando tu programa...",
+    start_this_program: "Empezar este programa →",
     regenerate: "Regenerar",
     progression: "PROGRESIÓN",
     coaching_tip: "💡",
@@ -377,11 +377,11 @@ const translations = {
 
     // ── Landing ──
     program_library: "BIBLIOTECA DE PROGRAMAS",
-    browse_smarter: "EXPLORA GRATIS. ENTRENA MÁS INTELIGENTE.",
-    browse_sub: "Regístrate gratis. Responde 5 preguntas. Te asignamos el programa ideal al instante.",
+    browse_smarter: "EXPLORA GRATIS. ENTRENA CON CABEZA.",
+    browse_sub: "Regístrate gratis. Responde 5 preguntas. Te mandamos el programa ideal al momento.",
     get_started: "EMPIEZA HOY",
     your_results: "TU PROGRAMA. TUS RESULTADOS.",
-    your_results_sub: "Responde 5 preguntas. Te asignamos el programa ideal al instante.",
+    your_results_sub: "Responde 5 preguntas. Te mandamos el programa ideal al momento.",
     create_free: "CREAR CUENTA GRATIS →",
     start_for_free: "EMPIEZA GRATIS →",
     view_programs: "VER PROGRAMAS",

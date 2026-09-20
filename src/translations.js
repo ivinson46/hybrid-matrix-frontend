@@ -166,6 +166,10 @@ const translations = {
     progression: "PROGRESSION",
     coaching_tip: "💡",
 
+    // ── Body stats ──
+    body_stats: "BODY STATS",
+    current_program: "CURRENT PROGRAM",
+
     // ── Admin ──
     admin_panel: "ADMIN",
     control_panel: "Control Panel",
@@ -354,6 +358,10 @@ const translations = {
     regenerate: "Regenerar",
     progression: "PROGRESIÓN",
     coaching_tip: "💡",
+
+    // ── Body stats ──
+    body_stats: "ESTADÍSTICAS CORPORALES",
+    current_program: "PROGRAMA ACTUAL",
 
     // ── Admin ──
     admin_panel: "ADMIN",

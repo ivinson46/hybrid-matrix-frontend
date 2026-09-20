@@ -16,6 +16,16 @@ const STATS = [
   { value: "EN/ES", label: "BILINGUAL" },
 ];
 
+function useIsMobile() {
+  const [mobile, setMobile] = useState(() => window.innerWidth < 640);
+  useEffect(() => {
+    const h = () => setMobile(window.innerWidth < 640);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
+  return mobile;
+}
+
 // Onboarding question definitions — labels resolved via translation at render time
 const ONBOARDING_QUESTIONS = [
   { id: "goal",       qKey: "q_goal",       optKeys: ["goal_fat_loss","goal_muscle","goal_athletic","goal_general","goal_glutes"],   values: ["Fat Loss","Muscle & Strength","Athletic Performance","General Fitness","Glutes & Lower Body"] },
@@ -292,6 +302,7 @@ function ProgramCard({ program, onSelect }) {
 
 function WorkoutView({ program, onBack }) {
   const { t } = useLang();
+  const mobile = useIsMobile();
   const color = getCategoryColor(program.category);
   const [completedSets, setCompletedSets] = useState({});
   const [programExercises, setProgramExercises] = useState([]);
@@ -362,17 +373,17 @@ function WorkoutView({ program, onBack }) {
   }, [progress, logged]);
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #050810 0%, #080D1A 100%)", fontFamily: "'Courier New', monospace", color: "#E2E8F0" }}>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #050810 0%, #080D1A 100%)", color: "#E2E8F0" }}>
       {/* Header */}
-      <div style={{ borderBottom: "1px solid #1a2744", padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#05081099", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 100 }}>
-        <div>
-          <div style={{ fontSize: "9px", letterSpacing: "2px", color: color, marginBottom: "4px", fontFamily: MONO }}>{program.category?.toUpperCase()} — {t("week_day", { cat: "", day: currentDay }).trim()}</div>
-          <div style={{ fontSize: "15px", fontWeight: "700", color: "#E2E8F0", fontFamily: SANS }}>{program.name}</div>
+      <div style={{ borderBottom: "1px solid #1a2744", padding: mobile ? "14px 16px" : "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#05081099", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 100 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: "9px", letterSpacing: "2px", color: color, marginBottom: "4px", fontFamily: MONO }}>{program.category?.toUpperCase()} — DAY {currentDay}</div>
+          <div style={{ fontSize: mobile ? "13px" : "15px", fontWeight: "700", color: "#E2E8F0", fontFamily: SANS, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{program.name}</div>
         </div>
-        <button onClick={onBack} style={{ background: "transparent", border: "1px solid #1a2744", padding: "8px 16px", cursor: "pointer", color: "#4A5568", fontSize: "13px", fontFamily: SANS, borderRadius: "6px" }}>← {t("back")}</button>
+        <button onClick={onBack} style={{ background: "transparent", border: "1px solid #1a2744", padding: "8px 14px", cursor: "pointer", color: "#4A5568", fontSize: "13px", fontFamily: SANS, borderRadius: "6px", marginLeft: "12px", flexShrink: 0 }}>← {t("back")}</button>
       </div>
 
-      <div style={{ padding: "24px 32px", maxWidth: "800px", margin: "0 auto" }}>
+      <div style={{ padding: mobile ? "16px" : "24px 32px", maxWidth: "800px", margin: "0 auto" }}>
 
         {/* Progress bar */}
         <div style={{ marginBottom: "24px" }}>
@@ -588,7 +599,7 @@ function AIGeneratorModal({ user, onClose, onStart }) {
     }
   };
 
-  const handleStart = () => {
+  const handleStart = async () => {
     const synthetic = {
       id: `ai-${Date.now()}`,
       name: generatedProgram.program_name,
@@ -599,6 +610,20 @@ function AIGeneratorModal({ user, onClose, onStart }) {
       description: generatedProgram.philosophy,
       aiProgram: generatedProgram,
     };
+    try {
+      const token = localStorage.getItem("hm_token");
+      await fetch(`${API}/api/v1/user-programs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          program_name: generatedProgram.program_name,
+          category,
+          days_per_week: generatedProgram.days.length,
+          weeks: 8,
+          program_data: generatedProgram,
+        }),
+      });
+    } catch (e) { console.error("Failed to save program", e); }
     onStart(synthetic);
     onClose();
   };
@@ -862,6 +887,7 @@ function AdminDashboard({ user, onBack }) {
 
 function Dashboard({ user, onLogout, onUpdateUser, lang, onToggleLang }) {
   const { t } = useLang();
+  const mobile = useIsMobile();
   const [programs, setPrograms] = useState([]);
   const [exercises, setExercises] = useState([]);
   const [filteredPrograms, setFilteredPrograms] = useState([]);
@@ -873,22 +899,43 @@ function Dashboard({ user, onLogout, onUpdateUser, lang, onToggleLang }) {
   const [showAdmin, setShowAdmin] = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
 
+  // Current saved program
+  const [currentUserProgram, setCurrentUserProgram] = useState(null);
+
+  // Body stats
+  const [bodyStats, setBodyStats] = useState(null);
+  const [editingStats, setEditingStats] = useState(false);
+  const [statsForm, setStatsForm] = useState({});
+  const [savingStats, setSavingStats] = useState(false);
+
   const filterKeys = ["filter_all","filter_fat_loss","filter_hypertrophy","filter_strength","filter_athletic","filter_general","filter_glutes"];
   const filterValues = ["All","Fat Loss","Hypertrophy","Strength","Athletic","General Fitness","Glutes"];
-  const filters = filterValues;
 
   useEffect(() => {
     const fetchData = async () => {
+      const token = localStorage.getItem("hm_token");
+      const authHeaders = { Authorization: `Bearer ${token}` };
       try {
-        const [progRes, exRes] = await Promise.all([
+        const [progRes, exRes, curProgRes, statsRes] = await Promise.all([
           fetch(`${API}/api/v1/programs`),
           fetch(`${API}/api/v1/exercises`),
+          fetch(`${API}/api/v1/user-programs/current`, { headers: authHeaders }),
+          fetch(`${API}/api/v1/body-stats`, { headers: authHeaders }),
         ]);
         const progData = await progRes.json();
         const exData = await exRes.json();
         setPrograms(progData.programs || []);
         setFilteredPrograms(progData.programs || []);
         setExercises(exData.exercises || []);
+        if (curProgRes.ok) {
+          const cp = await curProgRes.json();
+          setCurrentUserProgram(cp.program || null);
+        }
+        if (statsRes.ok) {
+          const sd = await statsRes.json();
+          setBodyStats(sd);
+          setStatsForm(sd);
+        }
       } catch (err) {
         console.error("Failed to fetch data", err);
       } finally {
@@ -897,6 +944,31 @@ function Dashboard({ user, onLogout, onUpdateUser, lang, onToggleLang }) {
     };
     fetchData();
   }, []);
+
+  const saveBodyStats = async () => {
+    setSavingStats(true);
+    try {
+      const token = localStorage.getItem("hm_token");
+      const res = await fetch(`${API}/api/v1/body-stats`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          weight_lbs: statsForm.weight_lbs ? parseFloat(statsForm.weight_lbs) : null,
+          height_inches: statsForm.height_inches ? parseFloat(statsForm.height_inches) : null,
+          body_fat_pct: statsForm.body_fat_pct ? parseFloat(statsForm.body_fat_pct) : null,
+          age: statsForm.age ? parseInt(statsForm.age) : null,
+          notes: statsForm.notes || null,
+        }),
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        setBodyStats(saved);
+        setStatsForm(saved);
+        setEditingStats(false);
+      }
+    } catch (e) { console.error("Failed to save stats", e); }
+    finally { setSavingStats(false); }
+  };
 
   useEffect(() => {
     if (activeFilter === "All") {
@@ -939,63 +1011,151 @@ function Dashboard({ user, onLogout, onUpdateUser, lang, onToggleLang }) {
     return <AdminDashboard user={user} onBack={() => setShowAdmin(false)} />;
   }
 
+  const px = mobile ? "16px" : "40px";
+  const statInputStyle = { background: "#050810", border: "1px solid #1a2744", borderRadius: "8px", color: "#E2E8F0", fontSize: "14px", padding: "10px 12px", fontFamily: SANS, outline: "none", width: "100%", boxSizing: "border-box" };
+
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #050810 0%, #080D1A 100%)", fontFamily: "'Courier New', monospace", color: "#E2E8F0" }}>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #050810 0%, #080D1A 100%)", color: "#E2E8F0" }}>
       {showOnboarding && <OnboardingModal userName={user.name} onComplete={handleOnboardingComplete} />}
       {selectedProgram && <ProgramDetailModal program={selectedProgram} onClose={() => setSelectedProgram(null)} onStart={handleStartProgram} />}
-      {showAIGenerator && <AIGeneratorModal user={user} onClose={() => setShowAIGenerator(false)} onStart={handleStartProgram} />}
+      {showAIGenerator && <AIGeneratorModal user={user} onClose={() => setShowAIGenerator(false)} onStart={(p) => { handleStartProgram(p); setCurrentUserProgram(null); }} />}
 
       {/* Header */}
-      <div style={{ borderBottom: "1px solid #1a2744", padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#05081099", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 100 }}>
+      <div style={{ borderBottom: "1px solid #1a2744", padding: `16px ${px}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: "#05081099", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 100 }}>
         <div>
           <div style={{ fontSize: "8px", letterSpacing: "5px", color: "#00FF87", fontFamily: MONO }}>{t("brand")}</div>
-          <div style={{ fontSize: "11px", color: "#4A5568", letterSpacing: "2px", fontFamily: MONO }}>{t("tagline")}</div>
+          {!mobile && <div style={{ fontSize: "11px", color: "#4A5568", letterSpacing: "2px", fontFamily: MONO }}>{t("tagline")}</div>}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: "12px", color: "#E2E8F0", fontFamily: SANS }}>{user.name.toUpperCase()}</div>
-            <div style={{ fontSize: "9px", color: "#00FF87", background: "#00FF8715", padding: "2px 8px", borderRadius: "4px", border: "1px solid #00FF8730", display: "inline-block", marginTop: "2px", fontFamily: MONO }}>{user.tier?.toUpperCase() || "STARTER"}</div>
-          </div>
-          {/* Language toggle */}
-          <button onClick={onToggleLang} style={{ background: "#1a274430", border: "1px solid #1a2744", padding: "7px 12px", cursor: "pointer", color: "#00FF87", fontSize: "12px", fontFamily: MONO, borderRadius: "6px", letterSpacing: "2px", fontWeight: "700" }}>{lang === "en" ? "ES" : "EN"}</button>
-          {user.role === "admin" && (
-            <button onClick={() => setShowAdmin(true)} style={{ background: "#00FF8712", border: "1px solid #00FF8740", padding: "8px 14px", cursor: "pointer", color: "#00FF87", fontSize: "12px", fontFamily: SANS, borderRadius: "6px", fontWeight: "600" }}>{t("admin")}</button>
+        <div style={{ display: "flex", alignItems: "center", gap: mobile ? "8px" : "12px" }}>
+          {!mobile && (
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "12px", color: "#E2E8F0", fontFamily: SANS }}>{user.name.toUpperCase()}</div>
+              <div style={{ fontSize: "9px", color: "#00FF87", background: "#00FF8715", padding: "2px 8px", borderRadius: "4px", border: "1px solid #00FF8730", display: "inline-block", marginTop: "2px", fontFamily: MONO }}>{user.tier?.toUpperCase() || "STARTER"}</div>
+            </div>
           )}
-          <button onClick={onLogout} style={{ background: "transparent", border: "1px solid #1a2744", padding: "8px 16px", cursor: "pointer", color: "#4A5568", fontSize: "12px", fontFamily: SANS, borderRadius: "6px" }}>{t("logout")}</button>
+          <button onClick={onToggleLang} style={{ background: "#1a274430", border: "1px solid #1a2744", padding: "7px 10px", cursor: "pointer", color: "#00FF87", fontSize: "11px", fontFamily: MONO, borderRadius: "6px", letterSpacing: "2px", fontWeight: "700" }}>{lang === "en" ? "ES" : "EN"}</button>
+          {user.role === "admin" && (
+            <button onClick={() => setShowAdmin(true)} style={{ background: "#00FF8712", border: "1px solid #00FF8740", padding: "8px 12px", cursor: "pointer", color: "#00FF87", fontSize: "12px", fontFamily: SANS, borderRadius: "6px", fontWeight: "600" }}>{t("admin")}</button>
+          )}
+          <button onClick={onLogout} style={{ background: "transparent", border: "1px solid #1a2744", padding: "8px 12px", cursor: "pointer", color: "#4A5568", fontSize: "12px", fontFamily: SANS, borderRadius: "6px" }}>{t("logout")}</button>
         </div>
       </div>
 
-      <div style={{ padding: "60px 40px 40px", maxWidth: "1200px", margin: "0 auto" }}>
+      <div style={{ padding: `32px ${px} 40px`, maxWidth: "1200px", margin: "0 auto" }}>
         <div style={{ fontSize: "9px", letterSpacing: "5px", color: "#00FF87", marginBottom: "10px", fontFamily: MONO }}>{t("welcome_back")}</div>
-        <h1 style={{ fontSize: "clamp(28px, 4vw, 48px)", fontWeight: "900", letterSpacing: "3px", margin: "0 0 8px", background: "linear-gradient(90deg, #E2E8F0, #718096)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", fontFamily: SANS }}>{user.name.toUpperCase()}</h1>
+        <h1 style={{ fontSize: "clamp(24px, 4vw, 44px)", fontWeight: "900", letterSpacing: "3px", margin: "0 0 8px", background: "linear-gradient(90deg, #E2E8F0, #718096)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", fontFamily: SANS }}>{user.name.toUpperCase()}</h1>
         <div style={{ fontSize: "12px", color: "#4A5568", letterSpacing: "2px", fontFamily: MONO }}>{t("matrix_ready")}</div>
 
-        <div style={{ marginTop: "40px", background: "linear-gradient(145deg, #0D1525, #111827)", border: "1px solid #1a2744", borderRadius: "12px", padding: "28px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "20px" }}>
+        {/* Tier card + AI Generate */}
+        <div style={{ marginTop: "28px", background: "linear-gradient(145deg, #0D1525, #111827)", border: "1px solid #1a2744", borderRadius: "12px", padding: mobile ? "20px" : "28px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
           <div>
             <div style={{ fontSize: "9px", letterSpacing: "3px", color: "#4A5568", marginBottom: "6px", fontFamily: MONO }}>{t("current_tier")}</div>
             <div style={{ fontSize: "22px", fontWeight: "900", color: "#00FF87", fontFamily: SANS }}>{user.tier?.toUpperCase() || "STARTER"}</div>
             <div style={{ fontSize: "13px", color: "#718096", marginTop: "4px", fontFamily: SANS }}>{t("programs_matched", { n: filteredPrograms.length })}</div>
           </div>
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            <button onClick={() => setShowOnboarding(true)} style={{ padding: "12px 20px", background: "transparent", border: "1px solid #00FF8730", borderRadius: "8px", cursor: "pointer", color: "#00FF87", fontSize: "12px", fontFamily: SANS }}>{t("retake_quiz")}</button>
-            <button onClick={() => setShowAIGenerator(true)} style={{ padding: "14px 28px", background: "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "8px", cursor: "pointer", color: "#050810", fontWeight: "800", fontSize: "14px", fontFamily: SANS }}>{t("ai_generate")}</button>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <button onClick={() => setShowOnboarding(true)} style={{ padding: "11px 18px", background: "transparent", border: "1px solid #00FF8730", borderRadius: "8px", cursor: "pointer", color: "#00FF87", fontSize: "12px", fontFamily: SANS }}>{t("retake_quiz")}</button>
+            <button onClick={() => setShowAIGenerator(true)} style={{ padding: "12px 24px", background: "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "8px", cursor: "pointer", color: "#050810", fontWeight: "800", fontSize: "14px", fontFamily: SANS }}>{t("ai_generate")}</button>
           </div>
         </div>
 
-        <div style={{ marginTop: "40px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
+        {/* Current Program section */}
+        {currentUserProgram && (
+          <div style={{ marginTop: "24px", background: "linear-gradient(145deg, #0D1525, #111827)", border: "1px solid #00FF8730", borderRadius: "12px", padding: mobile ? "18px" : "22px 28px" }}>
+            <div style={{ fontSize: "9px", letterSpacing: "4px", color: "#00FF87", fontFamily: MONO, marginBottom: "10px" }}>CURRENT PROGRAM</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+              <div>
+                <div style={{ fontSize: "16px", fontWeight: "700", color: "#E2E8F0", fontFamily: SANS }}>{currentUserProgram.program_name}</div>
+                <div style={{ fontSize: "12px", color: "#718096", marginTop: "4px", fontFamily: SANS }}>{currentUserProgram.category} · {currentUserProgram.days_per_week} days/wk · {currentUserProgram.weeks} weeks</div>
+              </div>
+              <button
+                onClick={() => {
+                  const prog = {
+                    id: `saved-${currentUserProgram.id}`,
+                    name: currentUserProgram.program_name,
+                    category: currentUserProgram.category,
+                    days_per_week: currentUserProgram.days_per_week,
+                    weeks: currentUserProgram.weeks,
+                    intensity: "AI-Generated",
+                    description: currentUserProgram.program_data?.philosophy || "",
+                    aiProgram: currentUserProgram.program_data,
+                  };
+                  setActiveProgram(prog);
+                }}
+                style={{ padding: "11px 22px", background: "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "8px", cursor: "pointer", color: "#050810", fontWeight: "700", fontSize: "13px", fontFamily: SANS, whiteSpace: "nowrap" }}
+              >Continue →</button>
+            </div>
+          </div>
+        )}
+
+        {/* Body Stats section */}
+        <div style={{ marginTop: "24px", background: "linear-gradient(145deg, #0D1525, #111827)", border: "1px solid #1a2744", borderRadius: "12px", padding: mobile ? "18px" : "22px 28px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <div style={{ fontSize: "9px", letterSpacing: "4px", color: "#4A5568", fontFamily: MONO }}>BODY STATS</div>
+            {!editingStats ? (
+              <button onClick={() => { setEditingStats(true); setStatsForm(bodyStats || {}); }} style={{ background: "transparent", border: "1px solid #1a2744", padding: "6px 14px", borderRadius: "6px", cursor: "pointer", color: "#718096", fontSize: "12px", fontFamily: SANS }}>Edit</button>
+            ) : (
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={saveBodyStats} disabled={savingStats} style={{ background: "#00FF8715", border: "1px solid #00FF8740", padding: "6px 14px", borderRadius: "6px", cursor: "pointer", color: "#00FF87", fontSize: "12px", fontFamily: SANS }}>{savingStats ? "Saving..." : "Save"}</button>
+                <button onClick={() => setEditingStats(false)} style={{ background: "transparent", border: "1px solid #1a2744", padding: "6px 14px", borderRadius: "6px", cursor: "pointer", color: "#4A5568", fontSize: "12px", fontFamily: SANS }}>Cancel</button>
+              </div>
+            )}
+          </div>
+          {editingStats ? (
+            <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: "12px" }}>
+              {[
+                { key: "weight_lbs", label: "WEIGHT (lbs)", placeholder: "e.g. 185" },
+                { key: "height_inches", label: "HEIGHT (in)", placeholder: "e.g. 70" },
+                { key: "body_fat_pct", label: "BODY FAT %", placeholder: "e.g. 15" },
+                { key: "age", label: "AGE", placeholder: "e.g. 28" },
+              ].map(({ key, label, placeholder }) => (
+                <div key={key}>
+                  <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "2px", fontFamily: MONO, marginBottom: "6px" }}>{label}</div>
+                  <input
+                    type="number"
+                    placeholder={placeholder}
+                    value={statsForm[key] || ""}
+                    onChange={e => setStatsForm(f => ({ ...f, [key]: e.target.value }))}
+                    style={statInputStyle}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: "12px" }}>
+              {[
+                { label: "WEIGHT", value: bodyStats?.weight_lbs ? `${bodyStats.weight_lbs} lbs` : "—", color: "#00FF87" },
+                { label: "HEIGHT", value: bodyStats?.height_inches ? `${Math.floor(bodyStats.height_inches / 12)}'${Math.round(bodyStats.height_inches % 12)}"` : "—", color: "#00D4FF" },
+                { label: "BODY FAT", value: bodyStats?.body_fat_pct ? `${bodyStats.body_fat_pct}%` : "—", color: "#A855F7" },
+                { label: "AGE", value: bodyStats?.age || "—", color: "#FF6B35" },
+              ].map(({ label, value, color }) => (
+                <div key={label} style={{ background: "#050810", borderRadius: "10px", padding: "14px", border: "1px solid #1a2744", textAlign: "center" }}>
+                  <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "2px", fontFamily: MONO, marginBottom: "6px" }}>{label}</div>
+                  <div style={{ fontSize: "20px", fontWeight: "700", color, fontFamily: SANS }}>{value}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {!bodyStats?.weight_lbs && !editingStats && (
+            <div style={{ marginTop: "12px", fontSize: "13px", color: "#4A5568", fontFamily: SANS }}>No stats logged yet. Tap Edit to add your measurements.</div>
+          )}
+        </div>
+
+        {/* Filters */}
+        <div style={{ marginTop: "32px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
           {filterValues.map((f, i) => (
-            <button key={f} onClick={() => setActiveFilter(f)} style={{ padding: "8px 16px", background: activeFilter === f ? "#00FF8715" : "transparent", border: `1px solid ${activeFilter === f ? "#00FF87" : "#1a2744"}`, borderRadius: "20px", cursor: "pointer", color: activeFilter === f ? "#00FF87" : "#4A5568", fontSize: "12px", fontFamily: SANS, transition: "all 0.2s" }}>{t(filterKeys[i])}</button>
+            <button key={f} onClick={() => setActiveFilter(f)} style={{ padding: "8px 14px", background: activeFilter === f ? "#00FF8715" : "transparent", border: `1px solid ${activeFilter === f ? "#00FF87" : "#1a2744"}`, borderRadius: "20px", cursor: "pointer", color: activeFilter === f ? "#00FF87" : "#4A5568", fontSize: "12px", fontFamily: SANS, transition: "all 0.2s" }}>{t(filterKeys[i])}</button>
           ))}
         </div>
 
-        <div style={{ marginTop: "30px" }}>
+        <div style={{ marginTop: "28px" }}>
           <div style={{ fontSize: "9px", letterSpacing: "4px", color: "#4A5568", marginBottom: "24px", fontFamily: MONO }}>
             {activeFilter === "All" ? t("all_programs") : t("programs_results", { category: activeFilter.toUpperCase(), n: filteredPrograms.length })}
           </div>
           {loading ? (
             <div style={{ textAlign: "center", padding: "60px", color: "#4A5568", fontSize: "13px", fontFamily: SANS }}>{t("loading_programs")}</div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px" }}>
               {filteredPrograms.map((p) => (
                 <ProgramCard key={p.id} program={p} onSelect={setSelectedProgram} />
               ))}
@@ -1008,6 +1168,7 @@ function Dashboard({ user, onLogout, onUpdateUser, lang, onToggleLang }) {
 }
 
 export default function HybridMatrix() {
+  const mobile = useIsMobile();
   const [lang, setLang] = useState(() => localStorage.getItem("hm_lang") || "en");
   const { t } = useTranslation(lang);
 
@@ -1057,7 +1218,7 @@ export default function HybridMatrix() {
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #050810 0%, #080D1A 50%, #050810 100%)", fontFamily: "'Courier New', monospace", color: "#E2E8F0", overflowX: "hidden" }}>
       {authModal && <AuthModal mode={authModal} onClose={() => setAuthModal(null)} onSuccess={handleAuthSuccess} />}
 
-      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 500, padding: "18px 40px", background: scrolled ? "rgba(5,8,16,0.95)" : "transparent", backdropFilter: scrolled ? "blur(10px)" : "none", borderBottom: scrolled ? "1px solid #1a274440" : "none", display: "flex", justifyContent: "space-between", alignItems: "center", transition: "all 0.3s" }}>
+      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 500, padding: mobile ? "14px 16px" : "18px 40px", background: scrolled ? "rgba(5,8,16,0.95)" : "transparent", backdropFilter: scrolled ? "blur(10px)" : "none", borderBottom: scrolled ? "1px solid #1a274440" : "none", display: "flex", justifyContent: "space-between", alignItems: "center", transition: "all 0.3s" }}>
         <div>
           <div style={{ fontSize: "8px", letterSpacing: "6px", color: "#00FF87", fontFamily: MONO }}>{t("brand")}</div>
           <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "3px", fontFamily: MONO }}>{t("tagline")}</div>
@@ -1069,7 +1230,7 @@ export default function HybridMatrix() {
         </div>
       </nav>
 
-      <div style={{ position: "relative", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", padding: "120px 40px 80px" }}>
+      <div style={{ position: "relative", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", padding: mobile ? "100px 16px 60px" : "120px 40px 80px" }}>
         <ParticleCanvas />
         <div style={{ position: "absolute", inset: 0, zIndex: 0, backgroundImage: `linear-gradient(rgba(0,255,135,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,135,0.03) 1px, transparent 1px)`, backgroundSize: "60px 60px" }} />
         <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: "800px" }}>
@@ -1096,7 +1257,7 @@ export default function HybridMatrix() {
         ))}
       </div>
 
-      <div id="programs" style={{ padding: "80px 40px", maxWidth: "1200px", margin: "0 auto" }}>
+      <div id="programs" style={{ padding: mobile ? "48px 16px" : "80px 40px", maxWidth: "1200px", margin: "0 auto" }}>
         <div style={{ marginBottom: "48px" }}>
           <div style={{ fontSize: "9px", letterSpacing: "5px", color: "#00FF87", marginBottom: "12px", fontFamily: MONO }}>{t("program_library")}</div>
           <h2 style={{ fontSize: "clamp(24px, 4vw, 40px)", fontWeight: "900", margin: "0 0 14px", color: "#E2E8F0", fontFamily: SANS }}>{t("browse_smarter")}</h2>

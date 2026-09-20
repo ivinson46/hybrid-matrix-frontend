@@ -1,6 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, createContext, useContext } from "react";
+import { useTranslation } from "./translations.js";
 
 const API = "https://web-production-1d446.up.railway.app";
+
+const LangContext = createContext("en");
+const useLang = () => {
+  const lang = useContext(LangContext);
+  return useTranslation(lang);
+};
 
 const STATS = [
   { value: "39", label: "PROGRAMS" },
@@ -9,32 +16,13 @@ const STATS = [
   { value: "EN/ES", label: "BILINGUAL" },
 ];
 
+// Onboarding question definitions — labels resolved via translation at render time
 const ONBOARDING_QUESTIONS = [
-  {
-    id: "goal",
-    question: "What is your primary goal?",
-    options: ["Fat Loss", "Muscle & Strength", "Athletic Performance", "General Fitness", "Glutes & Lower Body"],
-  },
-  {
-    id: "experience",
-    question: "What is your training experience?",
-    options: ["Beginner (0-1 year)", "Intermediate (1-3 years)", "Advanced (3+ years)"],
-  },
-  {
-    id: "days",
-    question: "How many days per week can you train?",
-    options: ["3 days", "4 days", "5 days", "6 days"],
-  },
-  {
-    id: "gender",
-    question: "Which program library fits you best?",
-    options: ["Men's Programs", "Women's Programs", "Both"],
-  },
-  {
-    id: "limitation",
-    question: "Any physical limitations or injuries?",
-    options: ["None", "Lower back issues", "Knee issues", "Shoulder issues", "Other / Multiple"],
-  },
+  { id: "goal",       qKey: "q_goal",       optKeys: ["goal_fat_loss","goal_muscle","goal_athletic","goal_general","goal_glutes"],   values: ["Fat Loss","Muscle & Strength","Athletic Performance","General Fitness","Glutes & Lower Body"] },
+  { id: "experience", qKey: "q_experience", optKeys: ["exp_beginner","exp_intermediate","exp_advanced"],                             values: ["Beginner (0-1 year)","Intermediate (1-3 years)","Advanced (3+ years)"] },
+  { id: "days",       qKey: "q_days",       optKeys: ["days_3","days_4","days_5","days_6"],                                          values: ["3 days","4 days","5 days","6 days"] },
+  { id: "gender",     qKey: "q_gender",     optKeys: ["gender_mens","gender_womens","gender_both"],                                  values: ["Men's Programs","Women's Programs","Both"] },
+  { id: "limitation", qKey: "q_limitation", optKeys: ["limit_none","limit_back","limit_knee","limit_shoulder","limit_other"],        values: ["None","Lower back issues","Knee issues","Shoulder issues","Other / Multiple"] },
 ];
 
 function getCategoryColor(category) {
@@ -245,35 +233,36 @@ function AuthModal({ mode, onClose, onSuccess }) {
 }
 
 function OnboardingModal({ userName, onComplete }) {
+  const { t } = useLang();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const q = ONBOARDING_QUESTIONS[step];
   const isLast = step === ONBOARDING_QUESTIONS.length - 1;
-  const select = (option) => {
-    const newAnswers = { ...answers, [q.id]: option };
+  const select = (value) => {
+    const newAnswers = { ...answers, [q.id]: value };
     setAnswers(newAnswers);
     if (isLast) { onComplete(newAnswers); } else { setStep(step + 1); }
   };
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.95)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-      <div style={{ background: "linear-gradient(145deg, #0A0F1E, #0D1525)", border: "1px solid #1a2744", borderRadius: "16px", padding: "40px", width: "100%", maxWidth: "500px", fontFamily: "'Courier New', monospace" }}>
-        <div style={{ textAlign: "center", marginBottom: "32px" }}>
-          <div style={{ fontSize: "9px", letterSpacing: "6px", color: "#00FF87", marginBottom: "8px" }}>PERSONALIZING YOUR MATRIX</div>
-          <div style={{ fontSize: "14px", color: "#E2E8F0", letterSpacing: "2px", fontWeight: "900" }}>WELCOME, {userName.toUpperCase()}</div>
+      <div style={{ background: "linear-gradient(145deg, #0A0F1E, #0D1525)", border: "1px solid #1a2744", borderRadius: "20px", padding: "40px", width: "100%", maxWidth: "500px" }}>
+        <div style={{ textAlign: "center", marginBottom: "28px" }}>
+          <div style={{ fontSize: "9px", letterSpacing: "5px", color: "#00FF87", marginBottom: "8px", fontFamily: MONO }}>{t("personalizing")}</div>
+          <div style={{ fontSize: "16px", color: "#E2E8F0", fontWeight: "700", fontFamily: SANS }}>{t("welcome")} {userName.toUpperCase()}</div>
         </div>
-        <div style={{ display: "flex", gap: "6px", marginBottom: "32px" }}>
+        <div style={{ display: "flex", gap: "6px", marginBottom: "28px" }}>
           {ONBOARDING_QUESTIONS.map((_, i) => (
             <div key={i} style={{ flex: 1, height: "3px", borderRadius: "2px", background: i <= step ? "#00FF87" : "#1a2744", transition: "background 0.3s" }} />
           ))}
         </div>
-        <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "3px", marginBottom: "12px" }}>QUESTION {step + 1} OF {ONBOARDING_QUESTIONS.length}</div>
-        <div style={{ fontSize: "16px", fontWeight: "900", color: "#E2E8F0", letterSpacing: "1px", marginBottom: "24px", lineHeight: 1.4 }}>{q.question}</div>
+        <div style={{ fontSize: "10px", color: "#4A5568", letterSpacing: "2px", marginBottom: "10px", fontFamily: MONO }}>{t("question_of", { n: step + 1, total: ONBOARDING_QUESTIONS.length })}</div>
+        <div style={{ fontSize: "17px", fontWeight: "700", color: "#E2E8F0", marginBottom: "20px", lineHeight: 1.4, fontFamily: SANS }}>{t(q.qKey)}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {q.options.map((option) => (
-            <button key={option} onClick={() => select(option)} style={{ padding: "14px 20px", background: answers[q.id] === option ? "#00FF8715" : "#050810", border: `1px solid ${answers[q.id] === option ? "#00FF87" : "#1a2744"}`, borderRadius: "8px", cursor: "pointer", color: answers[q.id] === option ? "#00FF87" : "#718096", fontSize: "11px", letterSpacing: "2px", fontFamily: "'Courier New', monospace", textAlign: "left", transition: "all 0.2s" }}>{option}</button>
+          {q.optKeys.map((optKey, i) => (
+            <button key={optKey} onClick={() => select(q.values[i])} style={{ padding: "14px 18px", background: answers[q.id] === q.values[i] ? "#00FF8715" : "#050810", border: `1px solid ${answers[q.id] === q.values[i] ? "#00FF87" : "#1a2744"}`, borderRadius: "10px", cursor: "pointer", color: answers[q.id] === q.values[i] ? "#00FF87" : "#718096", fontSize: "14px", fontFamily: SANS, textAlign: "left", transition: "all 0.2s" }}>{t(optKey)}</button>
           ))}
         </div>
-        <div style={{ marginTop: "24px", fontSize: "9px", color: "#4A5568", textAlign: "center", letterSpacing: "2px" }}>YOUR ANSWERS PERSONALIZE YOUR PROGRAM LIBRARY</div>
+        <div style={{ marginTop: "20px", fontSize: "10px", color: "#4A5568", textAlign: "center", letterSpacing: "2px", fontFamily: MONO }}>{t("onboarding_note")}</div>
       </div>
     </div>
   );
@@ -302,6 +291,7 @@ function ProgramCard({ program, onSelect }) {
 }
 
 function WorkoutView({ program, onBack }) {
+  const { t } = useLang();
   const color = getCategoryColor(program.category);
   const [completedSets, setCompletedSets] = useState({});
   const [programExercises, setProgramExercises] = useState([]);
@@ -376,10 +366,10 @@ function WorkoutView({ program, onBack }) {
       {/* Header */}
       <div style={{ borderBottom: "1px solid #1a2744", padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#05081099", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 100 }}>
         <div>
-          <div style={{ fontSize: "8px", letterSpacing: "3px", color: color, marginBottom: "4px" }}>{program.category?.toUpperCase()} — WEEK 1 DAY {currentDay}</div>
-          <div style={{ fontSize: "14px", fontWeight: "900", letterSpacing: "2px", color: "#E2E8F0" }}>{program.name}</div>
+          <div style={{ fontSize: "9px", letterSpacing: "2px", color: color, marginBottom: "4px", fontFamily: MONO }}>{program.category?.toUpperCase()} — {t("week_day", { cat: "", day: currentDay }).trim()}</div>
+          <div style={{ fontSize: "15px", fontWeight: "700", color: "#E2E8F0", fontFamily: SANS }}>{program.name}</div>
         </div>
-        <button onClick={onBack} style={{ background: "transparent", border: "1px solid #1a2744", padding: "8px 16px", cursor: "pointer", color: "#4A5568", fontSize: "9px", letterSpacing: "2px", fontFamily: "'Courier New', monospace", borderRadius: "6px" }}>← BACK</button>
+        <button onClick={onBack} style={{ background: "transparent", border: "1px solid #1a2744", padding: "8px 16px", cursor: "pointer", color: "#4A5568", fontSize: "13px", fontFamily: SANS, borderRadius: "6px" }}>← {t("back")}</button>
       </div>
 
       <div style={{ padding: "24px 32px", maxWidth: "800px", margin: "0 auto" }}>
@@ -387,8 +377,8 @@ function WorkoutView({ program, onBack }) {
         {/* Progress bar */}
         <div style={{ marginBottom: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-            <div style={{ fontSize: "11px", color: "#4A5568", fontFamily: SANS }}>Workout Progress</div>
-            <div style={{ fontSize: "11px", fontWeight: "600", color: color, fontFamily: SANS }}>{progress}% Complete</div>
+            <div style={{ fontSize: "11px", color: "#4A5568", fontFamily: SANS }}>{t("workout_progress")}</div>
+            <div style={{ fontSize: "11px", fontWeight: "600", color: color, fontFamily: SANS }}>{t("complete_pct", { n: progress })}</div>
           </div>
           <div style={{ background: "#1a2744", borderRadius: "4px", height: "6px" }}>
             <div style={{ background: `linear-gradient(90deg, ${color}, #00D4FF)`, height: "100%", borderRadius: "4px", width: `${progress}%`, transition: "width 0.4s" }} />
@@ -412,7 +402,7 @@ function WorkoutView({ program, onBack }) {
 
         {/* Prescription */}
         <div style={{ background: "linear-gradient(145deg, #0D1525, #111827)", border: `1px solid ${color}30`, borderRadius: "14px", padding: "18px 20px", marginBottom: "24px", display: "flex", gap: "16px", flexWrap: "wrap" }}>
-          {[{ label: "SETS", value: prescription.sets }, { label: "REPS", value: prescription.reps }, { label: "REST", value: prescription.rest }, { label: "EXERCISES", value: programExercises.length }].map((m) => (
+          {[{ label: t("sets"), value: prescription.sets }, { label: t("reps_label"), value: prescription.reps }, { label: t("rest"), value: prescription.rest }, { label: t("exercises"), value: programExercises.length }].map((m) => (
             <div key={m.label}>
               <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "2px", fontFamily: MONO }}>{m.label}</div>
               <div style={{ fontSize: "20px", fontWeight: "700", color: color, marginTop: "2px", fontFamily: SANS }}>{m.value}</div>
@@ -421,7 +411,7 @@ function WorkoutView({ program, onBack }) {
         </div>
 
         {/* Exercise list */}
-        <div style={{ fontSize: "10px", letterSpacing: "3px", color: "#4A5568", marginBottom: "14px", fontFamily: MONO }}>EXERCISES — TAP SETS TO LOG</div>
+        <div style={{ fontSize: "10px", letterSpacing: "3px", color: "#4A5568", marginBottom: "14px", fontFamily: MONO }}>{t("exercises_tap")}</div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           {programExercises.map((ex, exIdx) => (
@@ -435,7 +425,7 @@ function WorkoutView({ program, onBack }) {
                   <a href={ex.video_url} target="_blank" rel="noreferrer" style={{ textDecoration: "none", marginLeft: "12px", flexShrink: 0 }}>
                     <div style={{ width: "88px", height: "60px", borderRadius: "8px", border: `1px solid ${color}40`, background: "#050810", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                       <div style={{ fontSize: "20px" }}>▶</div>
-                      <div style={{ fontSize: "8px", color: color, fontFamily: MONO, letterSpacing: "1px", marginTop: "2px" }}>WATCH</div>
+                      <div style={{ fontSize: "8px", color: color, fontFamily: MONO, letterSpacing: "1px", marginTop: "2px" }}>{t("watch")}</div>
                     </div>
                   </a>
                 )}
@@ -443,7 +433,7 @@ function WorkoutView({ program, onBack }) {
 
               {/* Set tracking */}
               <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-                <div style={{ fontSize: "12px", color: "#4A5568", fontFamily: SANS, marginRight: "4px" }}>{prescription.reps} reps</div>
+                <div style={{ fontSize: "12px", color: "#4A5568", fontFamily: SANS, marginRight: "4px" }}>{t("reps_unit", { n: prescription.reps })}</div>
                 {Array.from({ length: prescription.sets }).map((_, setIdx) => {
                   const key = `${exIdx}-${setIdx}`;
                   const done = completedSets[key];
@@ -460,16 +450,16 @@ function WorkoutView({ program, onBack }) {
 
         {loading && (
           <div style={{ textAlign: "center", padding: "40px", color: "#4A5568", fontSize: "13px", fontFamily: SANS }}>
-            Loading workout...
+            {t("loading_workout")}
           </div>
         )}
 
         {progress === 100 && (
           <div style={{ marginTop: "32px", textAlign: "center", padding: "40px", background: "linear-gradient(145deg, #0D1525, #111827)", border: `1px solid ${color}40`, borderRadius: "16px" }}>
             <div style={{ fontSize: "40px", marginBottom: "12px" }}>🏆</div>
-            <div style={{ fontSize: "20px", fontWeight: "800", color: color, fontFamily: SANS, marginBottom: "8px" }}>Workout Complete!</div>
-            <div style={{ fontSize: "14px", color: "#718096", fontFamily: SANS }}>Day {currentDay} logged.</div>
-            <button onClick={onBack} style={{ marginTop: "24px", padding: "14px 32px", background: `linear-gradient(90deg, ${color}, #00D4FF)`, border: "none", borderRadius: "10px", cursor: "pointer", color: "#050810", fontWeight: "700", fontSize: "14px", fontFamily: SANS }}>Back to Programs</button>
+            <div style={{ fontSize: "20px", fontWeight: "800", color: color, fontFamily: SANS, marginBottom: "8px" }}>{t("workout_complete")}</div>
+            <div style={{ fontSize: "14px", color: "#718096", fontFamily: SANS }}>{t("day_logged", { n: currentDay })}</div>
+            <button onClick={onBack} style={{ marginTop: "24px", padding: "14px 32px", background: `linear-gradient(90deg, ${color}, #00D4FF)`, border: "none", borderRadius: "10px", cursor: "pointer", color: "#050810", fontWeight: "700", fontSize: "14px", fontFamily: SANS }}>{t("back_to_programs")}</button>
           </div>
         )}
       </div>
@@ -542,6 +532,7 @@ function StatBadge({ label, value, color }) {
 }
 
 function AIGeneratorModal({ user, onClose, onStart }) {
+  const { t } = useLang();
   const [generating, setGenerating] = useState(false);
   const [generatedProgram, setGeneratedProgram] = useState(null);
   const [error, setError] = useState("");
@@ -618,9 +609,9 @@ function AIGeneratorModal({ user, onClose, onStart }) {
 
         {/* Header */}
         <div style={{ marginBottom: "24px" }}>
-          <div style={{ fontSize: "9px", letterSpacing: "5px", color: color, fontFamily: MONO, marginBottom: "8px" }}>AI EXPERT PANEL</div>
-          <div style={{ fontSize: "22px", fontWeight: "800", color: "#E2E8F0", fontFamily: SANS, lineHeight: 1.2 }}>Your Science-Based Program</div>
-          <div style={{ fontSize: "14px", color: "#718096", marginTop: "6px", fontFamily: SANS }}>Built for your goals, experience, and schedule.</div>
+          <div style={{ fontSize: "9px", letterSpacing: "5px", color: color, fontFamily: MONO, marginBottom: "8px" }}>{t("ai_panel")}</div>
+          <div style={{ fontSize: "22px", fontWeight: "800", color: "#E2E8F0", fontFamily: SANS, lineHeight: 1.2 }}>{t("ai_title")}</div>
+          <div style={{ fontSize: "14px", color: "#718096", marginTop: "6px", fontFamily: SANS }}>{t("ai_sub")}</div>
         </div>
 
         {!generatedProgram && (
@@ -628,10 +619,10 @@ function AIGeneratorModal({ user, onClose, onStart }) {
             {/* Profile summary */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
               {[
-                { label: "GOAL", value: prefs.goal || "Not set" },
-                { label: "EXPERIENCE", value: prefs.experience || "Not set" },
-                { label: "DAYS/WEEK", value: prefs.days || "Not set" },
-                { label: "LIMITATIONS", value: prefs.limitation || "None" },
+                { label: t("goal_label"), value: prefs.goal || "Not set" },
+                { label: t("experience_label"), value: prefs.experience || "Not set" },
+                { label: t("days_week_label"), value: prefs.days || "Not set" },
+                { label: t("limitations_label"), value: prefs.limitation || "None" },
               ].map((m) => (
                 <div key={m.label} style={{ background: "#050810", borderRadius: "10px", padding: "14px 16px", border: "1px solid #1a2744" }}>
                   <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "2px", fontFamily: MONO, marginBottom: "4px" }}>{m.label}</div>
@@ -650,9 +641,9 @@ function AIGeneratorModal({ user, onClose, onStart }) {
 
             <div style={{ display: "flex", gap: "12px" }}>
               <button onClick={generate} disabled={generating} style={{ flex: 1, padding: "16px", background: generating ? "#1a2744" : `linear-gradient(90deg, ${color}, #00D4FF)`, border: "none", borderRadius: "10px", cursor: generating ? "not-allowed" : "pointer", color: "#050810", fontWeight: "800", fontSize: "14px", fontFamily: SANS }}>
-                {generating ? "Building your program..." : "Generate My Program →"}
+                {generating ? t("generating") : t("generate_btn")}
               </button>
-              <button onClick={onClose} style={{ padding: "16px 20px", background: "transparent", border: "1px solid #1a2744", borderRadius: "10px", cursor: "pointer", color: "#4A5568", fontSize: "13px", fontFamily: SANS }}>Cancel</button>
+              <button onClick={onClose} style={{ padding: "16px 20px", background: "transparent", border: "1px solid #1a2744", borderRadius: "10px", cursor: "pointer", color: "#4A5568", fontSize: "13px", fontFamily: SANS }}>{t("cancel")}</button>
             </div>
           </>
         )}
@@ -714,8 +705,8 @@ function AIGeneratorModal({ user, onClose, onStart }) {
             )}
 
             <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
-              <button onClick={handleStart} style={{ flex: 1, padding: "16px", background: `linear-gradient(90deg, ${color}, #00D4FF)`, border: "none", borderRadius: "10px", cursor: "pointer", color: "#050810", fontWeight: "800", fontSize: "15px", fontFamily: SANS }}>Start This Program →</button>
-              <button onClick={() => { setGeneratedProgram(null); setError(""); }} style={{ padding: "16px 20px", background: "transparent", border: "1px solid #1a2744", borderRadius: "10px", cursor: "pointer", color: "#4A5568", fontSize: "13px", fontFamily: SANS }}>Regenerate</button>
+              <button onClick={handleStart} style={{ flex: 1, padding: "16px", background: `linear-gradient(90deg, ${color}, #00D4FF)`, border: "none", borderRadius: "10px", cursor: "pointer", color: "#050810", fontWeight: "800", fontSize: "15px", fontFamily: SANS }}>{t("start_this_program")}</button>
+              <button onClick={() => { setGeneratedProgram(null); setError(""); }} style={{ padding: "16px 20px", background: "transparent", border: "1px solid #1a2744", borderRadius: "10px", cursor: "pointer", color: "#4A5568", fontSize: "13px", fontFamily: SANS }}>{t("regenerate")}</button>
             </div>
           </>
         )}
@@ -869,7 +860,8 @@ function AdminDashboard({ user, onBack }) {
   );
 }
 
-function Dashboard({ user, onLogout, onUpdateUser }) {
+function Dashboard({ user, onLogout, onUpdateUser, lang, onToggleLang }) {
+  const { t } = useLang();
   const [programs, setPrograms] = useState([]);
   const [exercises, setExercises] = useState([]);
   const [filteredPrograms, setFilteredPrograms] = useState([]);
@@ -881,7 +873,9 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
   const [showAdmin, setShowAdmin] = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
 
-  const filters = ["All", "Fat Loss", "Hypertrophy", "Strength", "Athletic", "General Fitness", "Glutes"];
+  const filterKeys = ["filter_all","filter_fat_loss","filter_hypertrophy","filter_strength","filter_athletic","filter_general","filter_glutes"];
+  const filterValues = ["All","Fat Loss","Hypertrophy","Strength","Athletic","General Fitness","Glutes"];
+  const filters = filterValues;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -951,52 +945,55 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
       {selectedProgram && <ProgramDetailModal program={selectedProgram} onClose={() => setSelectedProgram(null)} onStart={handleStartProgram} />}
       {showAIGenerator && <AIGeneratorModal user={user} onClose={() => setShowAIGenerator(false)} onStart={handleStartProgram} />}
 
+      {/* Header */}
       <div style={{ borderBottom: "1px solid #1a2744", padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#05081099", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 100 }}>
         <div>
-          <div style={{ fontSize: "8px", letterSpacing: "5px", color: "#00FF87" }}>HYBRID MATRIX</div>
-          <div style={{ fontSize: "11px", color: "#4A5568", letterSpacing: "2px" }}>CORE ENGINE v2.0</div>
+          <div style={{ fontSize: "8px", letterSpacing: "5px", color: "#00FF87", fontFamily: MONO }}>{t("brand")}</div>
+          <div style={{ fontSize: "11px", color: "#4A5568", letterSpacing: "2px", fontFamily: MONO }}>{t("tagline")}</div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: "11px", color: "#E2E8F0", letterSpacing: "1px" }}>{user.name.toUpperCase()}</div>
-            <div style={{ fontSize: "9px", letterSpacing: "2px", color: "#00FF87", background: "#00FF8715", padding: "2px 8px", borderRadius: "4px", border: "1px solid #00FF8730", display: "inline-block", marginTop: "2px" }}>{user.tier?.toUpperCase() || "STARTER"}</div>
+            <div style={{ fontSize: "12px", color: "#E2E8F0", fontFamily: SANS }}>{user.name.toUpperCase()}</div>
+            <div style={{ fontSize: "9px", color: "#00FF87", background: "#00FF8715", padding: "2px 8px", borderRadius: "4px", border: "1px solid #00FF8730", display: "inline-block", marginTop: "2px", fontFamily: MONO }}>{user.tier?.toUpperCase() || "STARTER"}</div>
           </div>
+          {/* Language toggle */}
+          <button onClick={onToggleLang} style={{ background: "#1a274430", border: "1px solid #1a2744", padding: "7px 12px", cursor: "pointer", color: "#00FF87", fontSize: "12px", fontFamily: MONO, borderRadius: "6px", letterSpacing: "2px", fontWeight: "700" }}>{lang === "en" ? "ES" : "EN"}</button>
           {user.role === "admin" && (
-            <button onClick={() => setShowAdmin(true)} style={{ background: "#00FF8712", border: "1px solid #00FF8740", padding: "8px 14px", cursor: "pointer", color: "#00FF87", fontSize: "12px", fontFamily: SANS, borderRadius: "6px", fontWeight: "600" }}>Admin</button>
+            <button onClick={() => setShowAdmin(true)} style={{ background: "#00FF8712", border: "1px solid #00FF8740", padding: "8px 14px", cursor: "pointer", color: "#00FF87", fontSize: "12px", fontFamily: SANS, borderRadius: "6px", fontWeight: "600" }}>{t("admin")}</button>
           )}
-          <button onClick={onLogout} style={{ background: "transparent", border: "1px solid #1a2744", padding: "8px 16px", cursor: "pointer", color: "#4A5568", fontSize: "12px", fontFamily: SANS, borderRadius: "6px" }}>Logout</button>
+          <button onClick={onLogout} style={{ background: "transparent", border: "1px solid #1a2744", padding: "8px 16px", cursor: "pointer", color: "#4A5568", fontSize: "12px", fontFamily: SANS, borderRadius: "6px" }}>{t("logout")}</button>
         </div>
       </div>
 
       <div style={{ padding: "60px 40px 40px", maxWidth: "1200px", margin: "0 auto" }}>
-        <div style={{ fontSize: "9px", letterSpacing: "5px", color: "#00FF87", marginBottom: "10px" }}>WELCOME BACK</div>
-        <h1 style={{ fontSize: "clamp(28px, 4vw, 48px)", fontWeight: "900", letterSpacing: "3px", margin: "0 0 8px", background: "linear-gradient(90deg, #E2E8F0, #718096)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{user.name.toUpperCase()}</h1>
-        <div style={{ fontSize: "12px", color: "#4A5568", letterSpacing: "2px" }}>YOUR TRAINING MATRIX IS READY</div>
+        <div style={{ fontSize: "9px", letterSpacing: "5px", color: "#00FF87", marginBottom: "10px", fontFamily: MONO }}>{t("welcome_back")}</div>
+        <h1 style={{ fontSize: "clamp(28px, 4vw, 48px)", fontWeight: "900", letterSpacing: "3px", margin: "0 0 8px", background: "linear-gradient(90deg, #E2E8F0, #718096)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", fontFamily: SANS }}>{user.name.toUpperCase()}</h1>
+        <div style={{ fontSize: "12px", color: "#4A5568", letterSpacing: "2px", fontFamily: MONO }}>{t("matrix_ready")}</div>
 
         <div style={{ marginTop: "40px", background: "linear-gradient(145deg, #0D1525, #111827)", border: "1px solid #1a2744", borderRadius: "12px", padding: "28px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "20px" }}>
           <div>
-            <div style={{ fontSize: "9px", letterSpacing: "3px", color: "#4A5568", marginBottom: "6px" }}>CURRENT TIER</div>
-            <div style={{ fontSize: "22px", fontWeight: "900", letterSpacing: "3px", color: "#00FF87" }}>{user.tier?.toUpperCase() || "STARTER"}</div>
-            <div style={{ fontSize: "10px", color: "#718096", marginTop: "4px" }}>{filteredPrograms.length} programs matched to your goals</div>
+            <div style={{ fontSize: "9px", letterSpacing: "3px", color: "#4A5568", marginBottom: "6px", fontFamily: MONO }}>{t("current_tier")}</div>
+            <div style={{ fontSize: "22px", fontWeight: "900", color: "#00FF87", fontFamily: SANS }}>{user.tier?.toUpperCase() || "STARTER"}</div>
+            <div style={{ fontSize: "13px", color: "#718096", marginTop: "4px", fontFamily: SANS }}>{t("programs_matched", { n: filteredPrograms.length })}</div>
           </div>
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            <button onClick={() => setShowOnboarding(true)} style={{ padding: "12px 20px", background: "transparent", border: "1px solid #00FF8730", borderRadius: "8px", cursor: "pointer", color: "#00FF87", fontSize: "10px", letterSpacing: "2px", fontFamily: "'Courier New', monospace" }}>RETAKE QUIZ →</button>
-            <button onClick={() => setShowAIGenerator(true)} style={{ padding: "14px 28px", background: "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "8px", cursor: "pointer", color: "#050810", fontWeight: "900", fontSize: "11px", letterSpacing: "3px", fontFamily: "'Courier New', monospace" }}>⚡ AI GENERATE →</button>
+            <button onClick={() => setShowOnboarding(true)} style={{ padding: "12px 20px", background: "transparent", border: "1px solid #00FF8730", borderRadius: "8px", cursor: "pointer", color: "#00FF87", fontSize: "12px", fontFamily: SANS }}>{t("retake_quiz")}</button>
+            <button onClick={() => setShowAIGenerator(true)} style={{ padding: "14px 28px", background: "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "8px", cursor: "pointer", color: "#050810", fontWeight: "800", fontSize: "14px", fontFamily: SANS }}>{t("ai_generate")}</button>
           </div>
         </div>
 
         <div style={{ marginTop: "40px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          {filters.map((f) => (
-            <button key={f} onClick={() => setActiveFilter(f)} style={{ padding: "8px 16px", background: activeFilter === f ? "#00FF8715" : "transparent", border: `1px solid ${activeFilter === f ? "#00FF87" : "#1a2744"}`, borderRadius: "20px", cursor: "pointer", color: activeFilter === f ? "#00FF87" : "#4A5568", fontSize: "9px", letterSpacing: "2px", fontFamily: "'Courier New', monospace", transition: "all 0.2s" }}>{f.toUpperCase()}</button>
+          {filterValues.map((f, i) => (
+            <button key={f} onClick={() => setActiveFilter(f)} style={{ padding: "8px 16px", background: activeFilter === f ? "#00FF8715" : "transparent", border: `1px solid ${activeFilter === f ? "#00FF87" : "#1a2744"}`, borderRadius: "20px", cursor: "pointer", color: activeFilter === f ? "#00FF87" : "#4A5568", fontSize: "12px", fontFamily: SANS, transition: "all 0.2s" }}>{t(filterKeys[i])}</button>
           ))}
         </div>
 
         <div style={{ marginTop: "30px" }}>
-          <div style={{ fontSize: "9px", letterSpacing: "5px", color: "#4A5568", marginBottom: "24px" }}>
-            {activeFilter === "All" ? "ALL PROGRAMS" : `${activeFilter.toUpperCase()} PROGRAMS`} — {filteredPrograms.length} RESULTS
+          <div style={{ fontSize: "9px", letterSpacing: "4px", color: "#4A5568", marginBottom: "24px", fontFamily: MONO }}>
+            {activeFilter === "All" ? t("all_programs") : t("programs_results", { category: activeFilter.toUpperCase(), n: filteredPrograms.length })}
           </div>
           {loading ? (
-            <div style={{ textAlign: "center", padding: "60px", color: "#4A5568", letterSpacing: "3px", fontSize: "11px" }}>LOADING PROGRAMS...</div>
+            <div style={{ textAlign: "center", padding: "60px", color: "#4A5568", fontSize: "13px", fontFamily: SANS }}>{t("loading_programs")}</div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px" }}>
               {filteredPrograms.map((p) => (
@@ -1011,6 +1008,15 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
 }
 
 export default function HybridMatrix() {
+  const [lang, setLang] = useState(() => localStorage.getItem("hm_lang") || "en");
+  const { t } = useTranslation(lang);
+
+  const toggleLang = () => {
+    const next = lang === "en" ? "es" : "en";
+    setLang(next);
+    localStorage.setItem("hm_lang", next);
+  };
+
   const [user, setUser] = useState(() => {
     try {
       const u = localStorage.getItem("hm_user");
@@ -1040,20 +1046,26 @@ export default function HybridMatrix() {
     setUser(null);
   };
 
-  if (user) return <Dashboard user={user} onLogout={handleLogout} onUpdateUser={setUser} />;
+  if (user) return (
+    <LangContext.Provider value={lang}>
+      <Dashboard user={user} onLogout={handleLogout} onUpdateUser={setUser} lang={lang} onToggleLang={toggleLang} />
+    </LangContext.Provider>
+  );
 
   return (
+    <LangContext.Provider value={lang}>
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #050810 0%, #080D1A 50%, #050810 100%)", fontFamily: "'Courier New', monospace", color: "#E2E8F0", overflowX: "hidden" }}>
       {authModal && <AuthModal mode={authModal} onClose={() => setAuthModal(null)} onSuccess={handleAuthSuccess} />}
 
       <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 500, padding: "18px 40px", background: scrolled ? "rgba(5,8,16,0.95)" : "transparent", backdropFilter: scrolled ? "blur(10px)" : "none", borderBottom: scrolled ? "1px solid #1a274440" : "none", display: "flex", justifyContent: "space-between", alignItems: "center", transition: "all 0.3s" }}>
         <div>
-          <div style={{ fontSize: "8px", letterSpacing: "6px", color: "#00FF87" }}>HYBRID MATRIX</div>
-          <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "3px" }}>CORE ENGINE v2.0</div>
+          <div style={{ fontSize: "8px", letterSpacing: "6px", color: "#00FF87", fontFamily: MONO }}>{t("brand")}</div>
+          <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "3px", fontFamily: MONO }}>{t("tagline")}</div>
         </div>
-        <div style={{ display: "flex", gap: "12px" }}>
-          <button onClick={() => setAuthModal("login")} style={{ padding: "9px 20px", background: "transparent", border: "1px solid #1a2744", borderRadius: "6px", cursor: "pointer", color: "#718096", fontSize: "9px", letterSpacing: "2px", fontFamily: "'Courier New', monospace" }}>LOGIN</button>
-          <button onClick={() => setAuthModal("register")} style={{ padding: "9px 20px", background: "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "6px", cursor: "pointer", color: "#050810", fontSize: "9px", fontWeight: "900", letterSpacing: "2px", fontFamily: "'Courier New', monospace" }}>START FREE</button>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <button onClick={toggleLang} style={{ padding: "8px 12px", background: "#1a274430", border: "1px solid #1a2744", borderRadius: "6px", cursor: "pointer", color: "#00FF87", fontSize: "11px", fontFamily: MONO, letterSpacing: "2px", fontWeight: "700" }}>{lang === "en" ? "ES" : "EN"}</button>
+          <button onClick={() => setAuthModal("login")} style={{ padding: "9px 20px", background: "transparent", border: "1px solid #1a2744", borderRadius: "6px", cursor: "pointer", color: "#718096", fontSize: "13px", fontFamily: SANS }}>{t("login")}</button>
+          <button onClick={() => setAuthModal("register")} style={{ padding: "9px 20px", background: "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "6px", cursor: "pointer", color: "#050810", fontSize: "13px", fontWeight: "700", fontFamily: SANS }}>{t("start_free")}</button>
         </div>
       </nav>
 
@@ -1061,16 +1073,16 @@ export default function HybridMatrix() {
         <ParticleCanvas />
         <div style={{ position: "absolute", inset: 0, zIndex: 0, backgroundImage: `linear-gradient(rgba(0,255,135,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,135,0.03) 1px, transparent 1px)`, backgroundSize: "60px 60px" }} />
         <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: "800px" }}>
-          <div style={{ display: "inline-block", fontSize: "9px", letterSpacing: "6px", color: "#00FF87", border: "1px solid #00FF8730", padding: "6px 18px", borderRadius: "4px", marginBottom: "32px", background: "#00FF8708" }}>SCIENCE-BASED · AI POWERED · BILINGUAL EN/ES</div>
-          <h1 style={{ fontSize: "clamp(42px, 8vw, 96px)", fontWeight: "900", letterSpacing: "6px", lineHeight: 1, margin: "0 0 24px" }}>
-            <span style={{ background: "linear-gradient(90deg, #00FF87, #00D4FF)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>HYBRID</span>
+          <div style={{ display: "inline-block", fontSize: "9px", letterSpacing: "5px", color: "#00FF87", border: "1px solid #00FF8730", padding: "6px 18px", borderRadius: "4px", marginBottom: "32px", background: "#00FF8708", fontFamily: MONO }}>{t("tagline_hero")}</div>
+          <h1 style={{ fontSize: "clamp(42px, 8vw, 96px)", fontWeight: "900", letterSpacing: "6px", lineHeight: 1, margin: "0 0 24px", fontFamily: SANS }}>
+            <span style={{ background: "linear-gradient(90deg, #00FF87, #00D4FF)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{t("hero_title_1")}</span>
             <br />
-            <span style={{ color: "#E2E8F0" }}>MATRIX</span>
+            <span style={{ color: "#E2E8F0" }}>{t("hero_title_2")}</span>
           </h1>
-          <p style={{ fontSize: "clamp(13px, 2vw, 16px)", color: "#718096", lineHeight: "1.8", maxWidth: "560px", margin: "0 auto 48px", letterSpacing: "1px" }}>Your body adapts to everything. Your program should too. AI-driven training built from real science.</p>
+          <p style={{ fontSize: "clamp(13px, 2vw, 16px)", color: "#718096", lineHeight: "1.8", maxWidth: "560px", margin: "0 auto 48px", fontFamily: SANS }}>{t("hero_sub")}</p>
           <div style={{ display: "flex", gap: "14px", justifyContent: "center", flexWrap: "wrap" }}>
-            <button onClick={() => setAuthModal("register")} style={{ padding: "16px 36px", background: "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "8px", cursor: "pointer", color: "#050810", fontWeight: "900", fontSize: "12px", letterSpacing: "3px", fontFamily: "'Courier New', monospace", boxShadow: "0 0 30px rgba(0,255,135,0.3)" }}>START FOR FREE →</button>
-            <button onClick={() => document.getElementById("programs")?.scrollIntoView({ behavior: "smooth" })} style={{ padding: "16px 36px", background: "transparent", border: "1px solid #1a2744", borderRadius: "8px", cursor: "pointer", color: "#718096", fontSize: "12px", letterSpacing: "3px", fontFamily: "'Courier New', monospace" }}>VIEW PROGRAMS</button>
+            <button onClick={() => setAuthModal("register")} style={{ padding: "16px 36px", background: "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "8px", cursor: "pointer", color: "#050810", fontWeight: "700", fontSize: "15px", fontFamily: SANS, boxShadow: "0 0 30px rgba(0,255,135,0.3)" }}>{t("start_for_free")}</button>
+            <button onClick={() => document.getElementById("programs")?.scrollIntoView({ behavior: "smooth" })} style={{ padding: "16px 36px", background: "transparent", border: "1px solid #1a2744", borderRadius: "8px", cursor: "pointer", color: "#718096", fontSize: "15px", fontFamily: SANS }}>{t("view_programs")}</button>
           </div>
         </div>
       </div>
@@ -1078,17 +1090,17 @@ export default function HybridMatrix() {
       <div style={{ borderTop: "1px solid #1a2744", borderBottom: "1px solid #1a2744", padding: "28px 40px", display: "flex", justifyContent: "center", gap: "clamp(30px, 6vw, 80px)", flexWrap: "wrap", background: "#05081080" }}>
         {STATS.map((s) => (
           <div key={s.label} style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "clamp(24px, 4vw, 36px)", fontWeight: "900", color: "#00FF87", letterSpacing: "2px" }}>{s.value}</div>
-            <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "3px", marginTop: "4px" }}>{s.label}</div>
+            <div style={{ fontSize: "clamp(24px, 4vw, 36px)", fontWeight: "900", color: "#00FF87", fontFamily: SANS }}>{s.value}</div>
+            <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "3px", marginTop: "4px", fontFamily: MONO }}>{s.label}</div>
           </div>
         ))}
       </div>
 
       <div id="programs" style={{ padding: "80px 40px", maxWidth: "1200px", margin: "0 auto" }}>
         <div style={{ marginBottom: "48px" }}>
-          <div style={{ fontSize: "9px", letterSpacing: "5px", color: "#00FF87", marginBottom: "12px" }}>PROGRAM LIBRARY</div>
-          <h2 style={{ fontSize: "clamp(24px, 4vw, 40px)", fontWeight: "900", letterSpacing: "3px", margin: "0 0 14px", color: "#E2E8F0" }}>BROWSE FREE. TRAIN SMARTER.</h2>
-          <p style={{ fontSize: "12px", color: "#4A5568", letterSpacing: "1px" }}>Sign up free. Answer 5 questions. We match you to the right program instantly.</p>
+          <div style={{ fontSize: "9px", letterSpacing: "5px", color: "#00FF87", marginBottom: "12px", fontFamily: MONO }}>{t("program_library")}</div>
+          <h2 style={{ fontSize: "clamp(24px, 4vw, 40px)", fontWeight: "900", margin: "0 0 14px", color: "#E2E8F0", fontFamily: SANS }}>{t("browse_smarter")}</h2>
+          <p style={{ fontSize: "14px", color: "#4A5568", fontFamily: SANS }}>{t("browse_sub")}</p>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
           {[
@@ -1101,20 +1113,21 @@ export default function HybridMatrix() {
         </div>
 
         <div style={{ marginTop: "60px", textAlign: "center", padding: "60px 40px", background: "linear-gradient(145deg, #0D1525, #111827)", borderRadius: "16px", border: "1px solid #1a2744" }}>
-          <div style={{ fontSize: "9px", letterSpacing: "5px", color: "#00FF87", marginBottom: "16px" }}>GET STARTED TODAY</div>
-          <h3 style={{ fontSize: "clamp(20px, 3vw, 32px)", fontWeight: "900", letterSpacing: "2px", margin: "0 0 14px", color: "#E2E8F0" }}>YOUR PROGRAM. YOUR RESULTS.</h3>
-          <p style={{ fontSize: "12px", color: "#718096", marginBottom: "32px", letterSpacing: "1px" }}>Answer 5 questions. We match you to the right program instantly.</p>
-          <button onClick={() => setAuthModal("register")} style={{ padding: "16px 40px", background: "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "8px", cursor: "pointer", color: "#050810", fontWeight: "900", fontSize: "12px", letterSpacing: "3px", fontFamily: "'Courier New', monospace", boxShadow: "0 0 30px rgba(0,255,135,0.2)" }}>CREATE FREE ACCOUNT →</button>
+          <div style={{ fontSize: "9px", letterSpacing: "5px", color: "#00FF87", marginBottom: "16px", fontFamily: MONO }}>{t("get_started")}</div>
+          <h3 style={{ fontSize: "clamp(20px, 3vw, 32px)", fontWeight: "900", margin: "0 0 14px", color: "#E2E8F0", fontFamily: SANS }}>{t("your_results")}</h3>
+          <p style={{ fontSize: "14px", color: "#718096", marginBottom: "32px", fontFamily: SANS }}>{t("your_results_sub")}</p>
+          <button onClick={() => setAuthModal("register")} style={{ padding: "16px 40px", background: "linear-gradient(90deg, #00FF87, #00D4FF)", border: "none", borderRadius: "8px", cursor: "pointer", color: "#050810", fontWeight: "700", fontSize: "15px", fontFamily: SANS, boxShadow: "0 0 30px rgba(0,255,135,0.2)" }}>{t("create_free")}</button>
         </div>
       </div>
 
       <div style={{ borderTop: "1px solid #1a2744", padding: "32px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
         <div>
-          <div style={{ fontSize: "8px", letterSpacing: "5px", color: "#00FF87" }}>HYBRID MATRIX</div>
-          <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "2px", marginTop: "4px" }}>SCIENCE-BASED · AI POWERED · EN/ES</div>
+          <div style={{ fontSize: "8px", letterSpacing: "5px", color: "#00FF87", fontFamily: MONO }}>{t("brand")}</div>
+          <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "2px", marginTop: "4px", fontFamily: MONO }}>{t("footer_sub")}</div>
         </div>
-        <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "2px" }}>© 2026 HYBRID MATRIX. ALL RIGHTS RESERVED.</div>
+        <div style={{ fontSize: "9px", color: "#4A5568", letterSpacing: "2px", fontFamily: MONO }}>{t("footer_copy")}</div>
       </div>
     </div>
+    </LangContext.Provider>
   );
 }
